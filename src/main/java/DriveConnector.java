@@ -12,13 +12,18 @@ public class DriveConnector{
     
     private static final String DRIVE_WALLPAPER_FOLDER_ID = "1UUL26QCa7U7paRpxYDYNZUFwrNlQ74uh";
     private static final String QUERY_STRING_DRIVE_WALLPAPER_FOLDER_IN_PARENTS = "'" + DRIVE_WALLPAPER_FOLDER_ID + "'" + " in parents";
-    private static final String WALLPAPER_STORAGE_DIRECTORY = "src\\main\\resources\\downloads\\";
+    private static final String WALLPAPER_STORAGE_DIRECTORY = "C:\\Users\\DELL\\Desktop\\WALLPAPER_STORAGE_DIRECTORY\\";
     
     private static Drive driveService;
+    private boolean testFlag;
+    
+    DriveConnector(boolean testFlag){
+        this.testFlag = testFlag;
+    }
     
     //checks if the Google Drive folder was successfully contacted.
     //Prints names of files contained in it.
-    public static void checkResult(FileList result){
+    public void checkResult(FileList result){
         List<File> files = result.getFiles();
         if (files == null || files.size() == 0) {
             System.out.println("\nNo files found.");
@@ -31,10 +36,11 @@ public class DriveConnector{
     }
     
     //Selects a random wallpaper from the list
-    public static String[] getRandomWallpaper(FileList result) throws IOException{
+    public String[] selectRandomWallpaper(FileList result) throws IOException{
         List<File> files = result.getFiles();
         int numberOfWallpapers, index;
         String newWallpaperId, newWallpaperName;
+        String [] wallpaperMeta;
         
         if (files == null || files.size() == 0) {
             throw new Error("No files found.");
@@ -47,27 +53,46 @@ public class DriveConnector{
             newWallpaperName = files.get(index).getName();
             System.out.println(newWallpaperName + " " + newWallpaperId);
             
-            return new String[] {newWallpaperId, newWallpaperName};
+            wallpaperMeta = new String[] {newWallpaperId, newWallpaperName};
+            
+            if(testFlag == true)
+                System.out.println("selectRandomeWallpaper: " + newWallpaperId + " " + newWallpaperName);
+            
+            return wallpaperMeta;
         }
     }
     
     //downloads the wallpaper with the given ID to the WALLPAPER_STORAGE_DIRECTORY
-    public static void downloadImage(String wallpaperId, String wallpaperName) throws IOException{
+    public String downloadImage(String [] wallpaperMeta) throws IOException{
+        
+        String wallpaperId = wallpaperMeta[0];
+        String wallpaperName = wallpaperMeta[1];
+        String downloadPath = WALLPAPER_STORAGE_DIRECTORY + wallpaperName;
+        
         FileOutputStream fileToDownloadTo;
         ByteArrayOutputStream downloadBuffer;
         
         downloadBuffer = new ByteArrayOutputStream();
-        fileToDownloadTo = new FileOutputStream(WALLPAPER_STORAGE_DIRECTORY + wallpaperName);
+        fileToDownloadTo = new FileOutputStream(downloadPath);
         
         driveService.files().get(wallpaperId)
             .executeMediaAndDownloadTo(downloadBuffer);
         
         downloadBuffer.writeTo(fileToDownloadTo);
+        
+        return downloadPath;
     }
     
-    public static void main(String args[]) throws IOException{
-        String [] wallpaperMeta;
+    public String getWallpaper() throws IOException{
+        FileList myfiles = getFilesFromDriveFolder();
+        String [] selectedWallpaperMeta = selectRandomWallpaper(myfiles);
+        String downloadedImageAddress = downloadImage(selectedWallpaperMeta);
         
+        return downloadedImageAddress;
+    }
+    
+    //returns a list of files from the Google Drive folder
+    public FileList getFilesFromDriveFolder() throws IOException{
         // Build a new authorized API client service.
         driveService = DriveAPI.getDriveService();
 
@@ -78,13 +103,6 @@ public class DriveConnector{
                 .setFields("nextPageToken, files(id, name)")
                 .execute();
         
-        //check the output
-        checkResult(result);
-        
-        //Select a random wallpaper from the list
-        System.out.println("\nRandom Wallpaper");
-        wallpaperMeta = getRandomWallpaper(result);
-        
-        downloadImage(wallpaperMeta[0], wallpaperMeta[1]);
+        return result;
     }
 }
