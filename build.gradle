@@ -1,13 +1,21 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
-mainClassName = 'DriveConnector'
+
+
+mainClassName = 'com.masquerade817.Main'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 version = '1.0'
 
 repositories {
     mavenCentral()
+}
+
+//https://stackoverflow.com/questions/47370856/display-unicode-characters-in-java-gradle-project
+compileJava.options.encoding = 'UTF-8'
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }
 
 dependencies {
@@ -19,5 +27,26 @@ dependencies {
     compile group: 'net.java.dev.jna', name: 'jna', version: '4.5.1'
     // https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform
     compile group: 'net.java.dev.jna', name: 'jna-platform', version: '4.5.1'
+    
+    // https://mvnrepository.com/artifact/commons-io/commons-io
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
 
+
+    // https://mvnrepository.com/artifact/junit/junit
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    
+
+}
+
+jar {
+  manifest {
+    attributes(
+        'Implementation-Title': 'Gradle Quickstart',
+        'Implementation-Version': version,
+        'Main-Class': 'com.masquerade817.Main',
+            //"Class-Path": configurations.runtimeClasspath.files.collect { it.getName() }.join(' ')
+    )
+    
+  }
+  from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {}
 }
