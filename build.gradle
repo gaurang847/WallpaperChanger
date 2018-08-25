@@ -1,8 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
-
-
 mainClassName = 'com.masquerade817.Main'
 sourceCompatibility = 1.8
 targetCompatibility = 1.8

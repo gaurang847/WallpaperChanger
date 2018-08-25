@@ -6,6 +6,7 @@ import com.google.api.services.drive.model.FileList;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Random;
 
@@ -38,6 +39,8 @@ public class DriveConnector{
         int numberOfWallpapers, index;
         String newWallpaperId, newWallpaperName;
         String [] wallpaperMeta;
+        
+        System.out.println(files);
         
         if (files == null || files.isEmpty()) {
             throw new Error("No files found.");
@@ -91,7 +94,7 @@ public class DriveConnector{
         return downloadToPath;
     }
     
-    public String getWallpaper() throws IOException{
+    public String getWallpaper() throws IOException, GeneralSecurityException{
         FileList myfiles = getFilesFromDriveFolder();
         String [] selectedWallpaperMeta = selectRandomWallpaper(myfiles);
         String downloadedImageAddress = downloadImage(selectedWallpaperMeta);
@@ -100,7 +103,7 @@ public class DriveConnector{
     }
     
     //returns a list of files from the Google Drive folder
-    public FileList getFilesFromDriveFolder() throws IOException{
+    public FileList getFilesFromDriveFolder() throws IOException, GeneralSecurityException{
         // Build a new authorized API client service.
         driveService = DriveAPI.getDriveService();
 
