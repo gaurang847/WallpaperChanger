@@ -3,117 +3,168 @@ package com.masquerade817;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
+
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
-public class DriveConnector{
-    
-    private static final String DRIVE_WALLPAPER_FOLDER_ID = "1UUL26QCa7U7paRpxYDYNZUFwrNlQ74uh";
-    private static final String QUERY_STRING_DRIVE_WALLPAPER_FOLDER_IN_PARENTS = "'" + DRIVE_WALLPAPER_FOLDER_ID + "'" + " in parents";
-    private static final String WALLPAPER_STORAGE_DIRECTORY = System.getProperty("user.home") + "\\Masquerade\\WALLPAPER_STORAGE_DIRECTORY\\";
-    
-    private static Drive driveService;
-    
-    //checks if the Google Drive folder was successfully contacted.
-    //Prints names of files contained in it.
-    public void checkResult(FileList result){
-        List<File> files = result.getFiles();
+public class DriveConnector {
+
+    /**
+     * Java 21 Record representing a Google Drive wallpaper item.
+     */
+    public record WallpaperItem(String id, String name, String mimeType) {}
+
+    private static final Set<String> SUPPORTED_IMAGE_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".bmp", ".webp"
+    );
+
+    private Drive driveService;
+
+    public DriveConnector() {
+    }
+
+    private Drive getService() throws IOException, GeneralSecurityException {
+        if (driveService == null) {
+            driveService = DriveAPI.getDriveService();
+        }
+        return driveService;
+    }
+
+    /**
+     * Retrieves all valid image files contained in the specified Google Drive folder.
+     * Uses pagination to discover all files.
+     */
+    public List<WallpaperItem> getImagesFromDriveFolder(String folderId) throws IOException, GeneralSecurityException {
+        if (folderId == null || folderId.isBlank()) {
+            throw new IllegalArgumentException("Google Drive folder ID cannot be empty.");
+        }
+
+        var cleanFolderId = AppConfig.extractDriveFolderId(folderId);
+        var service = getService();
+
+        var imageFiles = new ArrayList<WallpaperItem>();
+        String pageToken = null;
+        var query = "'%s' in parents and trashed = false".formatted(cleanFolderId);
+
+        do {
+            FileList result = service.files().list()
+                    .setQ(query)
+                    .setPageSize(100)
+                    .setFields("nextPageToken, files(id, name, mimeType)")
+                    .setPageToken(pageToken)
+                    .execute();
+
+            List<File> files = result.getFiles();
+            if (files != null) {
+                for (var file : files) {
+                    if (isImageFile(file.getName(), file.getMimeType())) {
+                        imageFiles.add(new WallpaperItem(file.getId(), file.getName(), file.getMimeType()));
+                    }
+                }
+            }
+            pageToken = result.getNextPageToken();
+        } while (pageToken != null);
+
+        return List.copyOf(imageFiles);
+    }
+
+    /**
+     * Checks if a file is an image based on its MIME type or file extension.
+     */
+    public boolean isImageFile(String fileName, String mimeType) {
+        if (fileName == null) {
+            return false;
+        }
+
+        if (mimeType != null && mimeType.toLowerCase().startsWith("image/")) {
+            return true;
+        }
+
+        var lowerName = fileName.toLowerCase();
+        return SUPPORTED_IMAGE_EXTENSIONS.stream().anyMatch(lowerName::endsWith);
+    }
+
+    /**
+     * Selects a random image file from the list.
+     * Uses Java 21 Sequenced Collections (getFirst()).
+     */
+    public WallpaperItem selectRandomWallpaper(List<WallpaperItem> files, String excludeDriveId) {
         if (files == null || files.isEmpty()) {
-            System.out.println("\nNo files found.");
-        } else {
-            System.out.println("\nFiles:");
-            for (File file : files) {
-                System.out.printf("%s (%s)\n", file.getName(), file.getId());
+            throw new IllegalStateException("No wallpapers found in the selected Google Drive folder.");
+        }
+
+        if (files.size() == 1) {
+            return files.getFirst();
+        }
+
+        List<WallpaperItem> candidates = files;
+        if (excludeDriveId != null && !excludeDriveId.isBlank()) {
+            var filtered = files.stream()
+                    .filter(item -> !excludeDriveId.equals(item.id()))
+                    .toList();
+            if (!filtered.isEmpty()) {
+                candidates = filtered;
             }
         }
-    }
-    
-    //Selects a random wallpaper from the list
-    public String[] selectRandomWallpaper(FileList result) throws IOException{
-        
-        List<File> files = result.getFiles();
-        int numberOfWallpapers, index;
-        String newWallpaperId, newWallpaperName;
-        String [] wallpaperMeta;
-        
-        System.out.println(files);
-        
-        if (files == null || files.isEmpty()) {
-            throw new Error("No files found.");
-        } else {
-            //get random wallpaper
-            numberOfWallpapers = files.size();
-            Random rand = new Random();
-            index = rand.nextInt(numberOfWallpapers);
-            newWallpaperId = files.get(index).getId();
-            newWallpaperName = files.get(index).getName();
-            System.out.println(newWallpaperName + " " + newWallpaperId);
-            
-            wallpaperMeta = new String[] {newWallpaperId, newWallpaperName};
-            
-            return wallpaperMeta;
-        }
-    }
-    
-    //downloads the wallpaper with the given ID to the WALLPAPER_STORAGE_DIRECTORY
-    public String downloadImage(String [] wallpaperMeta) throws IOException{
-        
-        String wallpaperId = wallpaperMeta[0];
-        String wallpaperName = wallpaperMeta[1];
-        String downloadToPath = WALLPAPER_STORAGE_DIRECTORY + wallpaperName;
-        java.io.File downloadDirectory;
-        
-        Drive.Files.Get request;
-        
-        FileOutputStream fileToDownloadTo;
-        ByteArrayOutputStream downloadBuffer;
-        
-        System.out.println(downloadToPath);
-        
-        downloadDirectory = new java.io.File(WALLPAPER_STORAGE_DIRECTORY);
-        if (! downloadDirectory.exists()){
-            downloadDirectory.mkdir();
-        }
-        
-        downloadBuffer = new ByteArrayOutputStream();
-        fileToDownloadTo = new FileOutputStream(downloadToPath);
-        
-        request = driveService.files().get(wallpaperId);
-        request.getMediaHttpDownloader().setProgressListener(new CustomProgressListener()).setDirectDownloadEnabled(true);
-        request.executeMediaAndDownloadTo(downloadBuffer);
-        
-        downloadBuffer.writeTo(fileToDownloadTo);
-        
-        fileToDownloadTo.close();
-        downloadBuffer.close();
-        
-        return downloadToPath;
-    }
-    
-    public String getWallpaper() throws IOException, GeneralSecurityException{
-        FileList myfiles = getFilesFromDriveFolder();
-        String [] selectedWallpaperMeta = selectRandomWallpaper(myfiles);
-        String downloadedImageAddress = downloadImage(selectedWallpaperMeta);
-        
-        return downloadedImageAddress;
-    }
-    
-    //returns a list of files from the Google Drive folder
-    public FileList getFilesFromDriveFolder() throws IOException, GeneralSecurityException{
-        // Build a new authorized API client service.
-        driveService = DriveAPI.getDriveService();
 
-        // Get the names and IDs for up to 10 files.
-        FileList result = driveService.files().list()
-                .setQ(QUERY_STRING_DRIVE_WALLPAPER_FOLDER_IN_PARENTS)
-                .setPageSize(10)
-                .setFields("nextPageToken, files(id, name)")
-                .execute();
-        
-        return result;
+        var rand = new Random();
+        int index = rand.nextInt(candidates.size());
+        return candidates.get(index);
+    }
+
+    /**
+     * Sanitizes a file name for safe storage on Windows file systems.
+     */
+    public static String sanitizeFileName(String name) {
+        if (name == null || name.isBlank()) {
+            return "wallpaper_%d.jpg".formatted(System.currentTimeMillis());
+        }
+        var clean = name.replaceAll("[\\\\/:*?\"<>|]", "_").strip();
+        return clean.isBlank() ? "wallpaper_%d.jpg".formatted(System.currentTimeMillis()) : clean;
+    }
+
+    /**
+     * Downloads an image file from Google Drive into the target directory.
+     * Uses modern NIO Path and Files.
+     */
+    public Path downloadWallpaper(WallpaperItem item, Path targetDirectory,
+                                 CustomProgressListener.DownloadCallback callback)
+            throws IOException, GeneralSecurityException {
+
+        if (!Files.exists(targetDirectory)) {
+            Files.createDirectories(targetDirectory);
+        }
+
+        var service = getService();
+        var safeName = sanitizeFileName(item.name());
+        var destinationPath = targetDirectory.resolve(safeName);
+
+        var request = service.files().get(item.id());
+        request.getMediaHttpDownloader()
+                .setProgressListener(new CustomProgressListener(callback))
+                .setDirectDownloadEnabled(true);
+
+        try (var buffer = new ByteArrayOutputStream()) {
+            request.executeMediaAndDownloadTo(buffer);
+            try (var out = Files.newOutputStream(destinationPath)) {
+                buffer.writeTo(out);
+            }
+        }
+
+        return destinationPath;
+    }
+
+    /**
+     * Tests connection to the Drive folder and returns the count of image files found.
+     */
+    public int countImagesInFolder(String folderId) throws IOException, GeneralSecurityException {
+        return getImagesFromDriveFolder(folderId).size();
     }
 }

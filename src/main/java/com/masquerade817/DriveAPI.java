@@ -8,55 +8,161 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.store.FileDataStoreFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
+import org.apache.commons.io.FileUtils;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
-import java.util.Collections;
 import java.util.List;
 
 public class DriveAPI {
     private static final String APPLICATION_NAME = "Wallpaper Changer";
-    private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
-    private static final String TOKENS_DIRECTORY_PATH = System.getProperty("user.home") + "/Masquerade/.credentials/drive-java-DriveAPI";
+    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
+
+    private static final Path APP_DIR = Path.of(System.getProperty("user.home"), ".wallpaperchanger");
+    private static final Path TOKENS_PATH = APP_DIR.resolve("tokens");
+    private static final Path DEFAULT_USER_CREDENTIALS_PATH = APP_DIR.resolve("credentials.json");
+    private static final String DEFAULT_CREDENTIALS_RESOURCE = "/credentials.json";
+
+    private static final List<String> SCOPES = List.of(DriveScopes.DRIVE_READONLY);
+
+    private static Drive cachedDriveService = null;
 
     /**
-     * Global instance of the scopes required by this quickstart.
-     * If modifying these scopes, delete your previously saved credentials/ folder.
+     * Checks if valid stored user OAuth tokens exist without opening a browser.
      */
-    private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE);
-    private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
-
-    /**
-     * Creates an authorized Credential object.
-     * @param HTTP_TRANSPORT The network HTTP Transport.
-     * @return An authorized Credential object.
-     * @throws IOException If the credentials.json file cannot be found.
-     */
-    private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
-        // Load client secrets.
-        InputStream in = DriveAPI.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
-
-        // Build flow and trigger user authorization request.
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
-                .setAccessType("offline")
-                .build();
-        return new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
+    public static synchronized boolean isAuthorized() {
+        if (!Files.exists(TOKENS_PATH) || !Files.isDirectory(TOKENS_PATH)) {
+            return false;
+        }
+        try (var stream = Files.list(TOKENS_PATH)) {
+            return stream.findAny().isPresent();
+        } catch (IOException e) {
+            return false;
+        }
     }
 
-    public static Drive getDriveService(String... args) throws IOException, GeneralSecurityException {
-        // Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        return new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+    /**
+     * Checks whether an OAuth client credentials file exists in any recognized location.
+     */
+    public static boolean hasCredentialsFile() {
+        var customPath = AppConfig.getInstance().data().customCredentialsPath();
+        if (customPath != null && !customPath.isBlank()) {
+            if (Files.isRegularFile(Path.of(customPath.strip()))) {
+                return true;
+            }
+        }
+
+        if (Files.isRegularFile(DEFAULT_USER_CREDENTIALS_PATH)) return true;
+        if (Files.isRegularFile(Path.of("credentials.json"))) return true;
+
+        return DriveAPI.class.getResourceAsStream(DEFAULT_CREDENTIALS_RESOURCE) != null;
+    }
+
+    public static Path getDefaultCredentialsPath() {
+        return DEFAULT_USER_CREDENTIALS_PATH;
+    }
+
+    /**
+     * Signs out by deleting stored tokens and resetting the client.
+     */
+    public static synchronized void signOut() throws IOException {
+        cachedDriveService = null;
+        if (Files.exists(TOKENS_PATH)) {
+            FileUtils.deleteDirectory(TOKENS_PATH.toFile());
+        }
+    }
+
+    /**
+     * Opens credentials input stream from configured, user-level, or classpath sources.
+     */
+    private static InputStream getCredentialsInputStream() throws IOException {
+        var config = AppConfig.getInstance();
+        var customPath = config.data().customCredentialsPath();
+
+        // 1. User-configured custom path
+        if (customPath != null && !customPath.isBlank()) {
+            var customFile = Path.of(customPath.strip());
+            if (Files.isRegularFile(customFile)) {
+                return Files.newInputStream(customFile);
+            }
+        }
+
+        // 2. User directory ~/.wallpaperchanger/credentials.json
+        if (Files.isRegularFile(DEFAULT_USER_CREDENTIALS_PATH)) {
+            return Files.newInputStream(DEFAULT_USER_CREDENTIALS_PATH);
+        }
+
+        // 3. Current working directory ./credentials.json
+        var localFile = Path.of("credentials.json");
+        if (Files.isRegularFile(localFile)) {
+            return Files.newInputStream(localFile);
+        }
+
+        // 4. Bundled resource (if bundled)
+        var resourceIn = DriveAPI.class.getResourceAsStream(DEFAULT_CREDENTIALS_RESOURCE);
+        if (resourceIn != null) {
+            return resourceIn;
+        }
+
+        throw new FileNotFoundException("""
+                Google OAuth credentials.json not found!
+                Please download your OAuth 2.0 Desktop credentials from Google Cloud Console,
+                and place the file at:
+                %s
+                or select it in the Wallpaper Changer Settings window.
+                """.formatted(DEFAULT_USER_CREDENTIALS_PATH.toAbsolutePath()));
+    }
+
+    /**
+     * Creates an authorized Credential object using modern local server receiver.
+     */
+    private static Credential getCredentials(final NetHttpTransport httpTransport) throws IOException {
+        try (var in = getCredentialsInputStream()) {
+            var clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
+            if (!Files.exists(TOKENS_PATH)) {
+                Files.createDirectories(TOKENS_PATH);
+            }
+
+            var flow = new GoogleAuthorizationCodeFlow.Builder(
+                    httpTransport, JSON_FACTORY, clientSecrets, SCOPES)
+                    .setDataStoreFactory(new FileDataStoreFactory(TOKENS_PATH.toFile()))
+                    .setAccessType("offline")
+                    .build();
+
+            var receiver = new LocalServerReceiver();
+            return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+        }
+    }
+
+    /**
+     * Returns an authorized Google Drive service instance.
+     */
+    public static synchronized Drive getDriveService() throws IOException, GeneralSecurityException {
+        if (cachedDriveService == null) {
+            var httpTransport = GoogleNetHttpTransport.newTrustedTransport();
+            var credential = getCredentials(httpTransport);
+            cachedDriveService = new Drive.Builder(httpTransport, JSON_FACTORY, credential)
+                    .setApplicationName(APPLICATION_NAME)
+                    .build();
+        }
+        return cachedDriveService;
+    }
+
+    /**
+     * Explicitly forces re-authentication (used by Settings GUI button).
+     */
+    public static synchronized Drive authenticate() throws IOException, GeneralSecurityException {
+        cachedDriveService = null;
+        return getDriveService();
     }
 }

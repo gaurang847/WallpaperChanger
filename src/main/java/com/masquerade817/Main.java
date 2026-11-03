@@ -1,18 +1,121 @@
 package com.masquerade817;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
+import com.formdev.flatlaf.FlatLightLaf;
 
-public class Main{
-    public static void main(String args[]) throws IOException, GeneralSecurityException{
-        String wallpaperPath;
-        
-        DriveConnector dc = new DriveConnector();
-        WallpaperSetter ws = new WallpaperSetter();
-    
-        wallpaperPath = dc.getWallpaper();
-        
-        ws.setRegistryValues();
-        ws.setWallpaper(wallpaperPath);
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import java.awt.TrayIcon;
+import java.nio.file.Path;
+
+public class Main {
+
+    private static SettingsFrame settingsFrame;
+    private static TrayManager trayManager;
+    private static WallpaperSyncService syncService;
+
+    public static void main(String[] args) {
+        boolean backgroundMode = false;
+        for (var arg : args) {
+            var lower = arg.toLowerCase();
+            if (lower.equals("--background") || lower.equals("-b") ||
+                lower.equals("--minimized") || lower.equals("--tray") ||
+                lower.equals("--silent")) {
+                backgroundMode = true;
+                break;
+            }
+        }
+
+        final boolean runInBackground = backgroundMode;
+
+        // Initialize modern FlatLaf Look and Feel with fallback to System Look and Feel
+        try {
+            FlatLightLaf.setup();
+        } catch (Throwable t) {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ignored) {
+            }
+        }
+
+        SwingUtilities.invokeLater(() -> initializeApp(runInBackground));
+    }
+
+    private static void initializeApp(boolean runInBackground) {
+        var config = AppConfig.getInstance();
+
+        // Ensure Windows Startup registration is in sync with user config
+        if (config.data().startOnStartup() && StartupManager.isSupported()) {
+            if (!StartupManager.isStartupEnabled()) {
+                StartupManager.setStartupEnabled(true);
+            }
+        }
+
+        // Initialize background wallpaper sync service
+        syncService = new WallpaperSyncService(config);
+
+        // Initialize System Tray
+        trayManager = new TrayManager(config, syncService, () -> {
+            if (settingsFrame != null) {
+                settingsFrame.setVisible(true);
+                settingsFrame.toFront();
+                settingsFrame.requestFocus();
+            }
+        });
+        trayManager.initTray();
+
+        // Listen for sync events to display System Tray notifications
+        syncService.addListener(new WallpaperSyncService.SyncListener() {
+            @Override
+            public void onSyncStarted() {
+            }
+
+            @Override
+            public void onProgress(String status) {
+            }
+
+            @Override
+            public void onSyncSuccess(String wallpaperName, Path localPath) {
+                trayManager.showNotification(
+                        "Wallpaper Changed",
+                        "New desktop background set: " + wallpaperName,
+                        TrayIcon.MessageType.INFO
+                );
+            }
+
+            @Override
+            public void onSyncFailed(String reason, Throwable error) {
+                trayManager.showNotification(
+                        "Wallpaper Sync Warning",
+                        reason,
+                        TrayIcon.MessageType.WARNING
+                );
+            }
+
+            @Override
+            public void onScheduleUpdated(java.util.Date nextRunTime) {
+            }
+        });
+
+        // Create the Settings GUI Frame
+        settingsFrame = new SettingsFrame(config, syncService, trayManager);
+
+        // Start background scheduler
+        syncService.start();
+
+        // If launched in background mode and folder is already configured, stay in tray.
+        // Otherwise, open the settings frame so user can configure Drive and preferences.
+        var folderId = config.data().driveFolderId();
+        boolean isConfigured = folderId != null && !folderId.isBlank();
+
+        if (!runInBackground || !isConfigured) {
+            settingsFrame.setVisible(true);
+        } else {
+            System.out.println("[WallpaperChanger] Running in background mode (System Tray).");
+            trayManager.showNotification(
+                    "Wallpaper Changer",
+                    "Started in background mode. Click the tray icon to open settings.",
+                    TrayIcon.MessageType.INFO
+            );
+        }
     }
 }
