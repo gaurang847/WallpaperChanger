@@ -70,8 +70,17 @@ public class AppConfig {
             if (!Files.exists(configDir)) {
                 Files.createDirectories(configDir);
             }
-        } catch (IOException e) {
-            System.err.println("Warning: Could not create config directory: " + e.getMessage());
+            var testFile = configDir.resolve(".test_rw");
+            Files.writeString(testFile, "test");
+            Files.deleteIfExists(testFile);
+        } catch (Exception e) {
+            configDir = Path.of(System.getProperty("java.io.tmpdir"), CONFIG_DIR_NAME);
+            try {
+                if (!Files.exists(configDir)) {
+                    Files.createDirectories(configDir);
+                }
+            } catch (Exception ignored) {
+            }
         }
 
         this.configPath = configDir.resolve(CONFIG_FILE_NAME);

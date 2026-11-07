@@ -322,7 +322,8 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private JPanel createStatusPanel() {
-        var panel = new JPanel(new BorderLayout());
+        // Use a 2-row layout so status and next-change timing never overlap regardless of filename length
+        var panel = new JPanel(new java.awt.GridLayout(2, 1, 0, 4));
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(210, 215, 220)),
                 new EmptyBorder(8, 12, 8, 12)
@@ -334,10 +335,10 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
         nextSyncLabel = new JLabel("Next Change: Scheduled");
         nextSyncLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        nextSyncLabel.setForeground(Color.GRAY);
+        nextSyncLabel.setForeground(new Color(100, 110, 120));
 
-        panel.add(statusLabel, BorderLayout.WEST);
-        panel.add(nextSyncLabel, BorderLayout.EAST);
+        panel.add(statusLabel);
+        panel.add(nextSyncLabel);
         return panel;
     }
 
@@ -595,6 +596,25 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         }
     }
 
+    /**
+     * Smartly truncates long file names while keeping the file extension visible.
+     */
+    public static String truncateFileName(String name, int maxLen) {
+        if (name == null || name.length() <= maxLen) {
+            return name != null ? name : "";
+        }
+        int extIdx = name.lastIndexOf('.');
+        String ext = extIdx != -1 ? name.substring(extIdx) : "";
+        String baseName = extIdx != -1 ? name.substring(0, extIdx) : name;
+        int avail = maxLen - ext.length() - 3;
+        if (avail < 4) {
+            return name.substring(0, Math.max(1, maxLen - 3)) + "...";
+        }
+        int half = avail / 2;
+        int secondHalf = avail - half;
+        return baseName.substring(0, half) + "..." + baseName.substring(baseName.length() - secondHalf) + ext;
+    }
+
     // SyncListener callbacks (Thread-safe UI updates)
 
     @Override
@@ -602,19 +622,26 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         SwingUtilities.invokeLater(() -> {
             changeNowButton.setEnabled(false);
             statusLabel.setText("Status: Syncing with Google Drive...");
+            statusLabel.setToolTipText("Sync in progress");
         });
     }
 
     @Override
     public void onProgress(String status) {
-        SwingUtilities.invokeLater(() -> statusLabel.setText("Status: " + status));
+        SwingUtilities.invokeLater(() -> {
+            statusLabel.setText("Status: " + status);
+            statusLabel.setToolTipText(status);
+        });
     }
 
     @Override
     public void onSyncSuccess(String wallpaperName, Path localPath) {
         SwingUtilities.invokeLater(() -> {
             changeNowButton.setEnabled(true);
-            statusLabel.setText("Status: Updated to %s (%s)".formatted(wallpaperName, dateFormat.format(new Date())));
+            String timeStr = dateFormat.format(new Date());
+            String display = truncateFileName(wallpaperName, 42);
+            statusLabel.setText("Status: Updated to %s (%s)".formatted(display, timeStr));
+            statusLabel.setToolTipText("Active Wallpaper: %s\nPath: %s\nUpdated: %s".formatted(wallpaperName, localPath, timeStr));
         });
     }
 
@@ -622,7 +649,9 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     public void onSyncFailed(String reason, Throwable error) {
         SwingUtilities.invokeLater(() -> {
             changeNowButton.setEnabled(true);
-            statusLabel.setText("Status: Error: " + reason);
+            String display = truncateFileName(reason, 50);
+            statusLabel.setText("Status: Error: " + display);
+            statusLabel.setToolTipText("Error: " + reason);
         });
     }
 
@@ -630,7 +659,9 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     public void onScheduleUpdated(Date nextRunTime) {
         SwingUtilities.invokeLater(() -> {
             if (nextRunTime != null) {
-                nextSyncLabel.setText("Next Change: " + dateFormat.format(nextRunTime));
+                nextSyncLabel.setText("Next Change: %s (Every %d min)".formatted(
+                        dateFormat.format(nextRunTime), config.data().frequencyMinutes()
+                ));
             }
         });
     }

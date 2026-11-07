@@ -14,6 +14,23 @@ public class Main {
     private static WallpaperSyncService syncService;
 
     public static void main(String[] args) {
+        // Enforce single running instance. If an instance is already active,
+        // it is brought to the foreground and this duplicate process terminates.
+        boolean isOnlyInstance = SingleInstanceManager.checkAndAcquireLock(() -> {
+            SwingUtilities.invokeLater(() -> {
+                if (settingsFrame != null) {
+                    settingsFrame.setVisible(true);
+                    settingsFrame.toFront();
+                    settingsFrame.requestFocus();
+                }
+            });
+        });
+
+        if (!isOnlyInstance) {
+            System.exit(0);
+            return;
+        }
+
         boolean backgroundMode = false;
         for (var arg : args) {
             var lower = arg.toLowerCase();

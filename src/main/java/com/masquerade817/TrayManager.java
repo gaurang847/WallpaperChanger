@@ -114,6 +114,7 @@ public class TrayManager {
         exit.addActionListener(e -> {
             cleanup();
             syncService.shutdown();
+            SingleInstanceManager.cleanup();
             System.exit(0);
         });
         popup.add(exit);
