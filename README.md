@@ -14,7 +14,7 @@
 - [Google Drive Setup Guide](#google-drive-setup-guide)
   - [Step 1: Create a Google Cloud Project](#step-1-create-a-google-cloud-project)
   - [Step 2: Enable the Google Drive API](#step-2-enable-the-google-drive-api)
-  - [Step 3: Configure the OAuth Consent Screen](#step-3-configure-the-oauth-consent-screen)
+  - [Step 3: Configure the OAuth Consent Screen & Publish App](#step-3-configure-the-oauth-consent-screen--publish-app)
   - [Step 4: Generate and Download Credentials JSON](#step-4-generate-and-download-credentials-json)
   - [Step 5: Connect in Wallpaper Changer](#step-5-connect-in-wallpaper-changer)
 - [How It Works (Under the Hood)](#how-it-works-under-the-hood)
@@ -117,7 +117,7 @@ Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. Follow 
 1. Open the [Google Drive API Library Page](https://console.cloud.google.com/apis/library/drive.googleapis.com).
 2. Click the blue **Enable** button.
 
-### Step 3: Configure the OAuth Consent Screen
+### Step 3: Configure the OAuth Consent Screen & Publish App
 1. Open the [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent).
 2. Under **User Type**, select **External** and click **Create**.
 3. Fill in the required fields:
@@ -129,10 +129,13 @@ Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. Follow 
    - Click **Add or Remove Scopes**.
    - Search for `drive.readonly` and check `.../auth/drive.readonly` (*See and download all your Google Drive files*).
    - Click **Update**, then **Save and Continue**.
-6. **Test Users Screen** *(Important)*:
-   - Click **+ Add Users**.
-   - Enter your personal Gmail address (the Google account whose Drive contains your wallpapers).
+6. **Test Users Screen**:
+   - Click **+ Add Users** and enter your personal Gmail address.
    - Click **Save and Continue**, then click **Back to Dashboard**.
+7. **Publish Your App (Critical for Permanent Login)**:
+   - On the OAuth Consent Screen dashboard, look under **Publishing status** near the top.
+   - Click the **PUBLISH APP** button and click **Confirm**.
+   - *(**Why this is important:** By default, Google puts new projects in "Testing" mode, which automatically expires login tokens every 7 days. Clicking "PUBLISH APP" changes the status to "In Production", granting permanent tokens so you never get logged out).*
 
 ### Step 4: Generate and Download Credentials JSON
 1. Open the [Google Cloud Credentials Page](https://console.cloud.google.com/apis/credentials).
