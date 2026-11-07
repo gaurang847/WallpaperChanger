@@ -30,45 +30,35 @@
 
 ## Key Features
 
-1. **Centralized Google Drive Storage**:
+1. **Centralized Google Drive Sync**:
    - Maintain a single Google Drive folder of wallpapers accessible across all your Windows devices.
-   - Paste either a Google Drive Folder ID or a full shareable browser URL (e.g. `https://drive.google.com/drive/folders/...`).
-   - Automatically filters for valid images (`.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`) and excludes trashed files.
-   - Paginates through large folders to discover all images without size limits.
+   - Accepts either a Google Drive folder ID or a standard shareable browser link.
+   - Automatically detects valid images (`.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`) and excludes trashed items.
 
-2. **Clean Local Storage (Unset Deletion)**:
-   - Only the currently active wallpaper is kept on disk.
-   - Once a new wallpaper is downloaded and set, the previously unset image file is deleted from local storage.
-   - Prevents gigabytes of old wallpaper files from accumulating on your drive.
+2. **Zero Local Clutter (Automatic Disk Cleanup)**:
+   - Keeps only the currently active wallpaper on your computer.
+   - Previously downloaded wallpapers are automatically removed when a new one is applied, saving disk space.
 
-3. **Background Execution & System Tray**:
-   - Runs silently in the background with a Windows System Tray icon.
-   - Right-click tray menu options:
-     - **Change Wallpaper Now**: Immediately fetch and set a new wallpaper.
-     - **Pause / Resume Auto-Change**: Temporarily halt automatic rotations.
-     - **Open Wallpaper Folder**: Quick access to the local folder in Windows File Explorer.
-     - **Settings...**: Open the configuration window.
-     - **Exit**: Cleanly shut down the application.
-   - Non-intrusive balloon notifications alert you when wallpapers update or if attention is required.
+3. **Silent System Tray Operation**:
+   - Runs quietly in the background without cluttering your taskbar.
+   - Right-click tray menu provides quick controls: **Change Wallpaper Now**, **Pause / Resume**, **Open Wallpaper Folder**, **Settings**, and **Exit**.
+   - Desktop notifications let you know when a new wallpaper is applied.
 
-4. **Modern Configuration Interface**:
-   - **Menu Bar & Global Shortcuts**: File menu with keyboard shortcuts (`Ctrl+Q` to exit, `Esc` to hide to tray, `Ctrl+R` to change wallpaper, `Ctrl+S` to save).
-   - **1-Click OAuth Credentials Picker**: Select your downloaded JSON directly from `Downloads` with automatic backup and persistence.
-   - **Dynamic 2-Row Status Bar**: Shows the active wallpaper filename (with smart middle truncation and full hover tooltip) alongside the next scheduled rotation time without text overlapping.
-   - **Action Bar**: Includes an **Exit Application** button with confirmation alongside **Change Wallpaper Now**, **Save Settings**, and **Close to Tray**.
-   - **Test Folder Connection**: Counts and displays how many wallpaper images exist in your Drive folder before saving.
-   - **Customizable Intervals**: Presets for 5m, 15m, 30m, 1h, 2h, 6h, 12h, 24h, or custom minutes.
-   - **Wallpaper Styling**: Fill/Stretch, Fit, Center, Tile, or Span.
+4. **Flexible Rotation & Display Settings**:
+   - **Customizable Intervals**: Choose rotation intervals from 5m, 15m, 30m, 1h, 2h, 6h, 12h, 24h, or custom minutes.
+   - **Wallpaper Styling**: Supports Fill/Stretch, Fit, Center, Tile, or Span.
+   - **Test Folder Connection**: Verify folder access and see total image count before saving.
 
-5. **Single-Instance Enforcement**:
-   - OS-level file locking (`app.lock`) and loopback socket IPC ensure only one instance runs at a time.
-   - Launching a second instance automatically brings the existing Settings window to the front and terminates the duplicate process.
+5. **Easy Setup & Dual Authentication Support**:
+   - **Service Account (Recommended)**: Set up once for permanent background sync with no 7-day token expirations or browser login popups.
+   - **OAuth 2.0**: Sign in via your browser with your Google account.
+   - Built-in file browser automatically detects your credentials type directly from your `Downloads` folder.
 
 6. **Windows Startup Integration**:
-   - Runs silently at Windows startup via the native Windows Registry (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`) without requiring Administrator permissions.
+   - Optionally start silently in the background whenever Windows boots, with no Administrator privileges required.
 
-7. **Modern Java 21 LTS Architecture**:
-   - Built on Java 21 LTS with Virtual Threads (`Thread.ofVirtual()`), FlatLaf Modern UI, Records, and NIO.2.
+7. **Single-Instance Protection**:
+   - Ensures only one background instance runs at a time. Launching the app again brings your existing Settings window to the front.
 
 ---
 
