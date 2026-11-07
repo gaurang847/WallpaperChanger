@@ -32,4 +32,24 @@ public class SettingsFrameTest {
         String exact = "1234567890.png";
         assertEquals(exact, SettingsFrame.truncateFileName(exact, exact.length()));
     }
+
+    @Test
+    public void testSettingsFrameExitButtonAndMenuExist() {
+        if (java.awt.GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+        var config = AppConfig.getInstance();
+        var syncService = new WallpaperSyncService(config);
+        var frame = new SettingsFrame(config, syncService, null);
+        try {
+            assertNotNull(frame.getExitAppButton());
+            assertEquals("Exit Application", frame.getExitAppButton().getText());
+            assertNotNull(frame.getCloseToTrayButton());
+            assertNotNull(frame.getJMenuBar());
+            assertEquals(1, frame.getJMenuBar().getMenuCount());
+            assertEquals("File", frame.getJMenuBar().getMenu(0).getText());
+        } finally {
+            frame.dispose();
+        }
+    }
 }

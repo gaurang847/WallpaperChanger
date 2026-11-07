@@ -135,4 +135,19 @@ public class Main {
             );
         }
     }
+
+    public static void exitApplication() {
+        if (settingsFrame != null) {
+            settingsFrame.performExit();
+        } else {
+            if (trayManager != null) {
+                trayManager.cleanup();
+            }
+            if (syncService != null) {
+                syncService.shutdown();
+            }
+            SingleInstanceManager.cleanup();
+            System.exit(0);
+        }
+    }
 }

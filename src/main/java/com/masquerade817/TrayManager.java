@@ -111,12 +111,7 @@ public class TrayManager {
         popup.addSeparator();
 
         var exit = new MenuItem("Exit");
-        exit.addActionListener(e -> {
-            cleanup();
-            syncService.shutdown();
-            SingleInstanceManager.cleanup();
-            System.exit(0);
-        });
+        exit.addActionListener(e -> Main.exitApplication());
         popup.add(exit);
 
         return popup;

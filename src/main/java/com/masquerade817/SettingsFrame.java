@@ -8,13 +8,18 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.border.CompoundBorder;
@@ -29,7 +34,9 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
 import java.awt.TrayIcon;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
@@ -74,6 +81,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     private JButton changeNowButton;
     private JButton saveButton;
     private JButton closeToTrayButton;
+    private JButton exitAppButton;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("hh:mm:ss a");
 
@@ -95,12 +103,28 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setResizable(false);
 
+        // Menu bar with File -> Exit, Save, Sync shortcuts
+        setJMenuBar(createMenuBar());
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 hideToTray();
             }
         });
+
+        // Register window keyboard shortcuts: Ctrl+Q to exit, Esc to hide to tray
+        var rootPane = getRootPane();
+        rootPane.registerKeyboardAction(
+                e -> confirmAndExit(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_Q, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+        rootPane.registerKeyboardAction(
+                e -> hideToTray(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
 
         var mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -132,6 +156,45 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         getContentPane().add(mainPanel, BorderLayout.CENTER);
         pack();
         setLocationRelativeTo(null);
+    }
+
+    private JMenuBar createMenuBar() {
+        var menuBar = new JMenuBar();
+
+        var fileMenu = new JMenu("File");
+        fileMenu.setMnemonic(KeyEvent.VK_F);
+
+        var changeNowItem = new JMenuItem("Change Wallpaper Now");
+        changeNowItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+        changeNowItem.addActionListener(e -> {
+            saveUIToConfig();
+            syncService.changeWallpaperNow();
+        });
+
+        var saveItem = new JMenuItem("Save Settings");
+        saveItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+        saveItem.addActionListener(e -> {
+            saveUIToConfig();
+            syncService.reschedule();
+            JOptionPane.showMessageDialog(this, "Settings saved successfully!", "Wallpaper Changer", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        var closeToTrayItem = new JMenuItem("Close to Tray");
+        closeToTrayItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+        closeToTrayItem.addActionListener(e -> hideToTray());
+
+        var exitItem = new JMenuItem("Exit Application");
+        exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
+        exitItem.addActionListener(e -> confirmAndExit());
+
+        fileMenu.add(changeNowItem);
+        fileMenu.add(saveItem);
+        fileMenu.addSeparator();
+        fileMenu.add(closeToTrayItem);
+        fileMenu.add(exitItem);
+
+        menuBar.add(fileMenu);
+        return menuBar;
     }
 
     private JPanel createHeaderPanel() {
@@ -343,8 +406,16 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private JPanel createActionBar() {
-        var bar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        var bar = new JPanel(new BorderLayout());
 
+        var leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        exitAppButton = new JButton("Exit Application");
+        exitAppButton.setForeground(new Color(180, 40, 40));
+        exitAppButton.setToolTipText("Completely exit Wallpaper Changer and stop background rotation (Ctrl+Q)");
+        exitAppButton.addActionListener(e -> confirmAndExit());
+        leftPanel.add(exitAppButton);
+
+        var rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         changeNowButton = new JButton("Change Wallpaper Now");
         changeNowButton.addActionListener(e -> {
             saveUIToConfig();
@@ -362,9 +433,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         closeToTrayButton = new JButton("Close to Tray");
         closeToTrayButton.addActionListener(e -> hideToTray());
 
-        bar.add(changeNowButton);
-        bar.add(saveButton);
-        bar.add(closeToTrayButton);
+        rightPanel.add(changeNowButton);
+        rightPanel.add(saveButton);
+        rightPanel.add(closeToTrayButton);
+
+        bar.add(leftPanel, BorderLayout.WEST);
+        bar.add(rightPanel, BorderLayout.EAST);
         return bar;
     }
 
@@ -664,5 +738,46 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
                 ));
             }
         });
+    }
+
+    public void confirmAndExit() {
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to exit Wallpaper Changer?\n(Background wallpaper rotation will stop)",
+                "Exit Wallpaper Changer",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+        if (choice == JOptionPane.YES_OPTION) {
+            performExit();
+        }
+    }
+
+    public void performExit() {
+        if (trayManager != null) {
+            trayManager.cleanup();
+        }
+        if (syncService != null) {
+            syncService.shutdown();
+        }
+        SingleInstanceManager.cleanup();
+        dispose();
+        System.exit(0);
+    }
+
+    public JButton getExitAppButton() {
+        return exitAppButton;
+    }
+
+    public JButton getCloseToTrayButton() {
+        return closeToTrayButton;
+    }
+
+    public JButton getSaveButton() {
+        return saveButton;
+    }
+
+    public JButton getChangeNowButton() {
+        return changeNowButton;
     }
 }
