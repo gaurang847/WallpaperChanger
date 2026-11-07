@@ -22,6 +22,7 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
@@ -226,8 +227,31 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         gbc.insets = new Insets(4, 4, 4, 4);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Row 0: Auth Status & Buttons
+        // Row 0: Credentials File (Step 1)
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
+        panel.add(new JLabel("OAuth Credentials (.json):"), gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        var credRow = new JPanel(new BorderLayout(6, 0));
+        customCredentialsField = new JTextField(24);
+        customCredentialsField.setToolTipText("Path to Google OAuth credentials JSON (downloaded from Google Cloud Console)");
+
+        browseCredentialsButton = new JButton("Browse...");
+        browseCredentialsButton.setToolTipText("Select the credentials JSON file downloaded from Google Cloud Console");
+        browseCredentialsButton.addActionListener(e -> onBrowseCredentials());
+
+        credRow.add(customCredentialsField, BorderLayout.CENTER);
+        credRow.add(browseCredentialsButton, BorderLayout.EAST);
+        panel.add(credRow, gbc);
+
+        // Row 1: Credentials status / hint
+        gbc.gridx = 1; gbc.gridy = 1;
+        credHintLabel = new JLabel(" ");
+        credHintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        panel.add(credHintLabel, gbc);
+
+        // Row 2: Account Authentication (Step 2)
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
         panel.add(new JLabel("Google Account:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -235,7 +259,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         authStatusLabel = new JLabel("Checking status...");
         authStatusLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-        authButton = new JButton("Authenticate");
+        authButton = new JButton("Authenticate with Google");
         authButton.addActionListener(e -> onAuthenticateClicked());
 
         signOutButton = new JButton("Sign Out");
@@ -246,14 +270,8 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         authRow.add(signOutButton);
         panel.add(authRow, gbc);
 
-        // Row 1: Credentials status / hint
-        gbc.gridx = 1; gbc.gridy = 1;
-        credHintLabel = new JLabel(" ");
-        credHintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        panel.add(credHintLabel, gbc);
-
-        // Row 2: Drive Folder ID / URL
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
+        // Row 3: Drive Folder ID / URL (Step 3)
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
         panel.add(new JLabel("Drive Folder ID / URL:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -268,27 +286,11 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         folderRow.add(testFolderButton, BorderLayout.EAST);
         panel.add(folderRow, gbc);
 
-        // Row 3: Folder test feedback
-        gbc.gridx = 1; gbc.gridy = 3;
+        // Row 4: Folder test feedback
+        gbc.gridx = 1; gbc.gridy = 4;
         testFolderResultLabel = new JLabel(" ");
         testFolderResultLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         panel.add(testFolderResultLabel, gbc);
-
-        // Row 4: Custom credentials.json (optional)
-        gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = 0;
-        panel.add(new JLabel("Custom credentials.json:"), gbc);
-
-        gbc.gridx = 1; gbc.weightx = 1;
-        var credRow = new JPanel(new BorderLayout(6, 0));
-        customCredentialsField = new JTextField(24);
-        customCredentialsField.setToolTipText("Path to custom Google OAuth credentials.json");
-
-        browseCredentialsButton = new JButton("Browse...");
-        browseCredentialsButton.addActionListener(e -> onBrowseCredentials());
-
-        credRow.add(customCredentialsField, BorderLayout.CENTER);
-        credRow.add(browseCredentialsButton, BorderLayout.EAST);
-        panel.add(credRow, gbc);
 
         return panel;
     }
@@ -451,7 +453,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             authStatusLabel.setForeground(new Color(39, 174, 96));
             authButton.setText("Re-authenticate");
             signOutButton.setEnabled(true);
-            credHintLabel.setText("OAuth tokens active.");
+            credHintLabel.setText("✓ Connected. Google Drive OAuth tokens are active.");
             credHintLabel.setForeground(new Color(39, 174, 96));
         } else {
             authStatusLabel.setText("○ Not Authenticated");
@@ -460,10 +462,10 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             signOutButton.setEnabled(false);
 
             if (!hasCreds) {
-                credHintLabel.setText("Notice: credentials.json needed. Place in ~/.wallpaperchanger/ or browse below.");
+                credHintLabel.setText("Step 1: Click 'Browse...' above to select your downloaded credentials JSON.");
                 credHintLabel.setForeground(new Color(211, 84, 0));
             } else {
-                credHintLabel.setText("credentials.json found. Click Authenticate to connect.");
+                credHintLabel.setText("✓ Credentials ready! Step 2: Click 'Authenticate with Google' to sign in.");
                 credHintLabel.setForeground(new Color(41, 128, 185));
             }
         }
@@ -471,6 +473,22 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     private void onAuthenticateClicked() {
         saveUIToConfig();
+
+        if (!DriveAPI.hasCredentialsFile()) {
+            int pick = JOptionPane.showConfirmDialog(
+                    this,
+                    "Google OAuth credentials JSON is required before authenticating.\n\n" +
+                    "Would you like to select the JSON file you downloaded from Google Cloud?",
+                    "Credentials Required",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            if (pick == JOptionPane.YES_OPTION) {
+                onBrowseCredentials();
+            }
+            return;
+        }
+
         authButton.setEnabled(false);
         authStatusLabel.setText("Opening browser...");
 
@@ -551,11 +569,39 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     private void onBrowseCredentials() {
         var chooser = new JFileChooser();
-        chooser.setDialogTitle("Select credentials.json");
+        chooser.setDialogTitle("Select Google OAuth Credentials JSON");
+        chooser.setFileFilter(new FileNameExtensionFilter("JSON Files (*.json)", "json"));
+
+        var downloadsDir = Path.of(System.getProperty("user.home"), "Downloads");
+        if (Files.isDirectory(downloadsDir)) {
+            chooser.setCurrentDirectory(downloadsDir.toFile());
+        }
+
         int result = chooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            customCredentialsField.setText(chooser.getSelectedFile().getAbsolutePath());
+            var selectedFile = chooser.getSelectedFile().toPath();
+            var targetPath = selectedFile;
+            // Copy to app dir so user clearing their Downloads folder doesn't break credentials later
+            try {
+                var appDir = DriveAPI.getDefaultCredentialsPath().getParent();
+                if (appDir != null && !Files.exists(appDir)) {
+                    Files.createDirectories(appDir);
+                }
+                var defaultTarget = DriveAPI.getDefaultCredentialsPath();
+                Files.copy(selectedFile, defaultTarget, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                targetPath = defaultTarget;
+            } catch (Exception ignored) {
+            }
+
+            customCredentialsField.setText(targetPath.toAbsolutePath().toString());
+            saveUIToConfig();
             updateAuthStatus();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Credentials loaded successfully!\nNow click 'Authenticate with Google' to connect your account.",
+                    "Credentials Ready",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
         }
     }
 
@@ -588,7 +634,16 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     private void loadConfigToUI() {
         ConfigData data = config.data();
         driveFolderField.setText(data.driveFolderId());
-        customCredentialsField.setText(data.customCredentialsPath());
+
+        var customPath = data.customCredentialsPath();
+        if (customPath != null && !customPath.isBlank()) {
+            customCredentialsField.setText(customPath);
+        } else if (Files.isRegularFile(DriveAPI.getDefaultCredentialsPath())) {
+            customCredentialsField.setText(DriveAPI.getDefaultCredentialsPath().toAbsolutePath().toString());
+        } else {
+            customCredentialsField.setText("");
+        }
+
         localFolderField.setText(data.localFolderPath());
 
         deleteUnsetCheckbox.setSelected(data.deleteUnsetWallpaper());

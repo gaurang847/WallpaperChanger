@@ -132,30 +132,29 @@ Google requires an OAuth 2.0 Client ID so desktop applications can connect to Go
    - Enter your Gmail address (the Google account whose Drive contains your wallpapers).
    - Click **Save and Continue**, then click **Back to Dashboard**.
 
-#### Step 4: Generate and Download `credentials.json`
+#### Step 4: Generate and Download Credentials JSON
 1. Go to the [Google Cloud Credentials Page](https://console.cloud.google.com/apis/credentials).
 2. Click **+ Create Credentials** at the top and select **OAuth client ID**.
 3. In the **Application type** dropdown, select **Desktop app**.
 4. Set **Name** to `Wallpaper Changer Desktop` (or any name you prefer) and click **Create**.
-5. A popup window titled *"OAuth client created"* will appear. Click **Download JSON**.
-
-#### Step 5: Place the File on Your PC
-1. Rename the downloaded file to `credentials.json` (if it has a long name like `client_secret_xxxx.json`).
-2. Move it to:
-   ```cmd
-   %USERPROFILE%\.wallpaperchanger\credentials.json
-   ```
-   *(For example: `C:\Users\YourUsername\.wallpaperchanger\credentials.json`)*
-   
-   **Alternatively**, you can save it anywhere on your PC and click **Browse...** next to **Custom credentials.json** in the Wallpaper Changer Settings window.
+5. A popup window titled *"OAuth client created"* will appear. Click **Download JSON** (this saves a file like `client_secret_xxxxxxxx.json` to your **Downloads** folder).
 
 ---
 
-### 2. Connect Your Google Account
-1. In the Wallpaper Changer Settings window, click **Authenticate with Google**.
-2. Your default browser opens the Google OAuth authorization prompt.
-3. Sign in with your Google account and grant read access to your Drive.
-4. User OAuth tokens are saved securely on your PC in `%USERPROFILE%\.wallpaperchanger\tokens\`.
+### 2. Connect Your Account in Wallpaper Changer (No file moving needed!)
+
+1. Open the **Wallpaper Changer Settings** window (run `run.bat` or `install.bat`).
+2. Under **Google Drive Settings**, click **Browse...** next to **OAuth Credentials (.json)**.
+3. Select the JSON file you just downloaded (the file picker automatically opens in your `Downloads` folder).
+4. Click **Authenticate with Google**.
+   - Your browser will open the authorization page.
+   - Sign in with your Google account and click **Continue / Allow**.
+5. Paste your Drive wallpaper folder link in the **Drive Folder ID / URL** field.
+6. Click **Test Folder** to verify, then click **Save Settings**!
+
+*(The app automatically saves and protects your credentials so you can safely clear your Downloads folder later).*
+
+---
 
 ### 3. Set Your Wallpapers Folder
 1. In Google Drive, open your wallpapers folder and copy the URL from your browser address bar:
