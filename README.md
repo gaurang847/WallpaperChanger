@@ -1,114 +1,112 @@
 # WallpaperChanger
 
-**WallpaperChanger** is a lightweight, modern Windows background application that keeps your desktop wallpaper synchronized with a centralized Google Drive folder. It periodically downloads a random wallpaper from your Drive folder, applies it as your Windows desktop background, and cleans up old wallpapers once they have been unset so that your local drive stays completely uncluttered.
+**WallpaperChanger** is a lightweight, modern Windows background application that keeps your desktop wallpaper synchronized with a centralized Google Drive folder. It periodically selects and downloads a random wallpaper from your Drive folder, applies it as your Windows desktop background, and automatically cleans up unset wallpapers so that your local disk stays completely uncluttered.
+
+---
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Quick Start (For Users)](#quick-start-for-users)
+  - [Option 1: One-Click Automatic Install (Recommended)](#option-1-one-click-automatic-install-recommended)
+  - [Option 2: Run Portable (In-Place)](#option-2-run-portable-in-place)
+  - [Option 3: Silent Background Launch](#option-3-silent-background-launch)
+- [Google Drive Setup Guide](#google-drive-setup-guide)
+  - [Step 1: Create a Google Cloud Project](#step-1-create-a-google-cloud-project)
+  - [Step 2: Enable the Google Drive API](#step-2-enable-the-google-drive-api)
+  - [Step 3: Configure the OAuth Consent Screen](#step-3-configure-the-oauth-consent-screen)
+  - [Step 4: Generate and Download Credentials JSON](#step-4-generate-and-download-credentials-json)
+  - [Step 5: Connect in Wallpaper Changer](#step-5-connect-in-wallpaper-changer)
+- [How It Works (Under the Hood)](#how-it-works-under-the-hood)
+  - [Clean Local Storage ("Unset Deletion")](#clean-local-storage-unset-deletion)
+  - [Single-Instance Enforcement & IPC](#single-instance-enforcement--ipc)
+  - [Windows Startup Integration](#windows-startup-integration)
+- [Developer Guide (Building from Source)](#developer-guide-building-from-source)
+  - [Prerequisites](#prerequisites)
+  - [Build Standalone Fat JAR](#build-standalone-fat-jar)
+  - [Running Unit Tests](#running-unit-tests)
+  - [Automated GitHub Releases (CI/CD)](#automated-github-releases-cicd)
+- [Configuration & File Locations](#configuration--file-locations)
+- [Uninstallation](#uninstallation)
 
 ---
 
 ## Key Features
 
 1. **Centralized Google Drive Storage**:
-   - Maintain a single Google Drive folder of wallpapers shared across all your Windows devices.
-   - Supports pasting either a Google Drive Folder ID or a full shareable browser URL (e.g. `https://drive.google.com/drive/folders/...`).
+   - Maintain a single Google Drive folder of wallpapers accessible across all your Windows devices.
+   - Paste either a Google Drive Folder ID or a full shareable browser URL (e.g. `https://drive.google.com/drive/folders/...`).
    - Automatically filters for valid images (`.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`) and excludes trashed files.
-   - Paginates through large folders to discover all images.
+   - Paginates through large folders to discover all images without size limits.
 
 2. **Clean Local Storage (Unset Deletion)**:
-   - Only the currently active wallpaper is stored locally.
-   - As soon as a new wallpaper is selected and set, the previously unset wallpaper file is automatically removed from your local disk.
-   - Prevents gigabytes of wallpaper files from accumulating on your computer over time.
+   - Only the currently active wallpaper is kept on disk.
+   - Once a new wallpaper is downloaded and set, the previously unset image file is deleted from local storage.
+   - Prevents gigabytes of old wallpaper files from accumulating on your drive.
 
 3. **Background Execution & System Tray**:
    - Runs silently in the background with a Windows System Tray icon.
-   - Tray context menu options:
+   - Right-click tray menu options:
      - **Change Wallpaper Now**: Immediately fetch and set a new wallpaper.
-     - **Pause / Resume Auto-Change**: Temporarily pause automatic rotations.
+     - **Pause / Resume Auto-Change**: Temporarily halt automatic rotations.
      - **Open Wallpaper Folder**: Quick access to the local folder in Windows File Explorer.
-     - **Settings...**: Open the configuration interface.
+     - **Settings...**: Open the configuration window.
      - **Exit**: Cleanly shut down the application.
-   - Balloon notifications alert you when wallpapers update or if attention is needed.
+   - Non-intrusive balloon notifications alert you when wallpapers update or if attention is required.
 
 4. **Modern Configuration Interface**:
-   - **Menu Bar & Global Shortcuts**: File menu with shortcuts (`Ctrl+Q` to exit, `Esc` to hide to tray, `Ctrl+R` to change wallpaper, `Ctrl+S` to save).
-   - **1-Click OAuth Credentials Picker**: Select your downloaded credentials JSON directly from `Downloads` with automatic backup.
-   - **Status Bar**: Clean 2-row layout displaying the active wallpaper filename (with smart truncation and full hover tooltip) alongside the next scheduled rotation time.
-   - **Action Bar**: Includes a prominent **Exit Application** button alongside **Change Wallpaper Now**, **Save Settings**, and **Close to Tray**.
-   - **Test Folder Connection**: Instant verification that tests your Drive link and counts how many wallpaper images exist.
+   - **Menu Bar & Global Shortcuts**: File menu with keyboard shortcuts (`Ctrl+Q` to exit, `Esc` to hide to tray, `Ctrl+R` to change wallpaper, `Ctrl+S` to save).
+   - **1-Click OAuth Credentials Picker**: Select your downloaded JSON directly from `Downloads` with automatic backup and persistence.
+   - **Dynamic 2-Row Status Bar**: Shows the active wallpaper filename (with smart middle truncation and full hover tooltip) alongside the next scheduled rotation time without text overlapping.
+   - **Action Bar**: Includes an **Exit Application** button with confirmation alongside **Change Wallpaper Now**, **Save Settings**, and **Close to Tray**.
+   - **Test Folder Connection**: Counts and displays how many wallpaper images exist in your Drive folder before saving.
    - **Customizable Intervals**: Presets for 5m, 15m, 30m, 1h, 2h, 6h, 12h, 24h, or custom minutes.
    - **Wallpaper Styling**: Fill/Stretch, Fit, Center, Tile, or Span.
 
 5. **Single-Instance Enforcement**:
-   - Uses native OS file locking and local loopback IPC to guarantee only one instance runs at a time.
+   - OS-level file locking (`app.lock`) and loopback socket IPC ensure only one instance runs at a time.
    - Launching a second instance automatically brings the existing Settings window to the front and terminates the duplicate process.
 
 6. **Windows Startup Integration**:
-   - Starts automatically with Windows in background mode (`--background`).
-   - Uses native Windows Registry (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`) via JNA without requiring Administrator privileges.
-   - Toggleable directly from the Settings GUI checkbox or configured automatically via `install.bat`.
+   - Runs silently at Windows startup via the native Windows Registry (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`) without requiring Administrator permissions.
 
-7. **Built on Java 21 LTS & Modern Libraries**:
-   - **Virtual Threads** (`Thread.ofVirtual()`): Background downloads and Drive API calls run on lightweight virtual threads.
-   - **FlatLaf Modern UI**: Clean, rounded, high-DPI modern Swing theme.
-   - **Records**: Boilerplate-free immutable configuration models.
-   - **Jackson JSON**: Persistent settings stored in human-readable `config.json`.
-   - **Standalone Executable Fat JAR**: Bundles all dependencies into `target/WallpaperChanger-1.0.0.jar`.
+7. **Modern Java 21 LTS Architecture**:
+   - Built on Java 21 LTS with Virtual Threads (`Thread.ofVirtual()`), FlatLaf Modern UI, Records, and NIO.2.
 
 ---
 
-## Requirements
+## Quick Start (For Users)
 
-- **Operating System**: Windows 11 / 10 / 8 / 7 (64-bit or 32-bit)
-- **Java**: Java Development Kit (JDK) 21 or higher
-- **Maven**: Apache Maven 3.6+ (to build the project)
+> **Requirement**: Ensure [Java Runtime (JRE / JDK) 21 or higher](https://adoptium.net/temurin/releases/?version=21) is installed on your Windows PC.
 
----
+If you downloaded the ready-to-run release zip (`WallpaperChanger-windows.zip`) from [GitHub Releases](https://github.com):
 
-## Build Instructions
-
-To build the executable standalone JAR:
-
-```bash
-mvn clean package
-```
-
-The output fat JAR will be generated at:
-```
-target/WallpaperChanger-1.0.0.jar
-```
-
-To run all unit tests:
-```bash
-mvn test
-```
-
----
-
-## Installation & Running
+1. Extract the `.zip` archive to any folder on your computer.
+2. Choose one of the launch options below:
 
 ### Option 1: One-Click Automatic Install (Recommended)
 Double-click [`install.bat`](file:///home/gaurang/projects/WallpaperChanger/install.bat). It will:
-1. Automatically compile the project with Maven (if not already compiled).
-2. Install the application into `%LOCALAPPDATA%\WallpaperChanger\`.
-3. Add a shortcut to your Windows **Start Menu** (`Wallpaper Changer`).
-4. Register the app in Windows Startup (starts silently in the background on every boot).
-5. Launch the Settings window immediately so you can connect your Google account and set your Drive folder.
+1. Install the application into `%LOCALAPPDATA%\WallpaperChanger\`.
+2. Add a shortcut to your Windows **Start Menu** (`Wallpaper Changer`).
+3. Register the app in Windows Startup (starts silently in the background on every boot).
+4. Launch the Settings window immediately so you can connect your Google account.
 
-*(To completely remove the app later, simply double-click [`uninstall.bat`](file:///home/gaurang/projects/WallpaperChanger/uninstall.bat)).*
+### Option 2: Run Portable (In-Place)
+Double-click [`run.bat`](file:///home/gaurang/projects/WallpaperChanger/run.bat):
+- Starts Wallpaper Changer directly from its current folder without modifying your system.
 
-### Option 2: Run in-place (Portable / No installation needed)
-Simply double-click [`run.bat`](file:///home/gaurang/projects/WallpaperChanger/run.bat):
-- It automatically builds the JAR if needed and starts the application directly.
-
-### Option 3: Silent Background Launch (Tray Only)
+### Option 3: Silent Background Launch
 Double-click [`run-background.vbs`](file:///home/gaurang/projects/WallpaperChanger/run-background.vbs) or execute:
 ```cmd
-javaw -jar target\WallpaperChanger-1.0.0.jar --background
+javaw -jar WallpaperChanger.jar --background
 ```
+- Starts directly in the Windows System Tray without showing any console or window.
 
 ---
 
 ## Google Drive Setup Guide
 
-Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. Follow this step-by-step guide:
+Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. Follow this step-by-step walkthrough:
 
 ### Step 1: Create a Google Cloud Project
 1. Open the [Google Cloud Project Creation Page](https://console.cloud.google.com/projectcreate).
@@ -145,51 +143,108 @@ Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. Follow 
 
 ---
 
-### Step 5: Connect in Wallpaper Changer (No manual file moving needed!)
+### Step 5: Connect in Wallpaper Changer
 
 1. Open Wallpaper Changer (run `run.bat` or `install.bat`).
 2. Under **Google Drive Settings**, click the **Browse...** button next to **OAuth Credentials (.json)**.
-   - The file picker will automatically open in your `Downloads` folder.
+   - The file picker will automatically open in your `Downloads` folder with `.json` filtered.
    - Select the JSON file you just downloaded.
-   - *Wallpaper Changer automatically saves a secure copy so you can safely empty your Downloads folder later.*
+   - *Wallpaper Changer automatically creates a secure copy in your app directory so you can safely clear your Downloads folder later.*
 3. Click **Authenticate with Google**.
-   - Your default web browser will open Google's authorization page.
+   - Your default browser will open Google's authorization page.
    - Sign in with the Gmail account you added under Test Users.
    - If prompted with *"Google hasn't verified this app"*, click **Advanced** → **Go to Wallpaper Changer (unsafe)** → **Continue / Allow**.
 4. Copy the URL of your Google Drive wallpapers folder from your browser address bar:
-   `https://drive.google.com/drive/folders/1UUL26QCa7U7paRpxYDYNZUFwrNlQ74uh`
-5. Paste it into **Drive Folder ID / URL** in Settings.
+   ```
+   https://drive.google.com/drive/folders/1UUL26QCa7U7paRpxYDYNZUFwrNlQ74uh
+   ```
+5. Paste it into the **Drive Folder ID / URL** field in Settings.
 6. Click **Test Folder** to verify that images are detected, then click **Save Settings**!
 
 ---
 
-## How "Unset Deletion" Works
+## How It Works (Under the Hood)
 
-1. Wallpaper Changer checks Google Drive and downloads a newly selected random wallpaper into your local directory.
-2. It calls the Windows API `SystemParametersInfo` to apply the image as the active desktop background.
-3. Windows updates the wallpaper and transcodes it.
-4. Wallpaper Changer pauses briefly (~1.5 seconds) to allow Windows to release file locks on the previous wallpaper.
-5. The previously active wallpaper file is deleted from your local disk.
-6. Only the single currently active wallpaper remains in your local directory!
+### Clean Local Storage ("Unset Deletion")
+1. Wallpaper Changer queries the Google Drive API and downloads a newly selected random wallpaper into your local directory.
+2. It calls the Windows User32 API `SystemParametersInfo(SPI_SETDESKWALLPAPER)` to set the image as the active background.
+3. Windows switches to the new wallpaper and transcodes it into the operating system cache.
+4. Wallpaper Changer pauses briefly (~1.5 seconds) allowing Windows to release file locks on the previous wallpaper.
+5. The previously active wallpaper file is deleted from local disk. Only the single active wallpaper remains locally!
+
+### Single-Instance Enforcement & IPC
+1. On startup, the application acquires an exclusive file lock on `%USERPROFILE%\.wallpaperchanger\app.lock`.
+2. It binds an ephemeral loopback socket on `127.0.0.1` and records the assigned port in `app.port`.
+3. If a duplicate instance is launched, lock acquisition fails. The duplicate process reads `app.port`, sends a focus signal to the primary process, and immediately terminates.
+4. The primary instance intercepts the signal on the Swing Event Dispatch Thread and brings the Settings window to the front.
+
+### Windows Startup Integration
+1. Toggleable via the Settings GUI checkbox or configured automatically by `install.bat`.
+2. Registers a startup command in `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\WallpaperChanger` pointing to a lightweight VBS launcher (`run.vbs`) running `javaw --background`.
+3. Requires no Administrator / UAC privileges.
 
 ---
 
-## Windows Startup & Management
+## Developer Guide (Building from Source)
 
-To have Wallpaper Changer run silently every time Windows boots:
-- Enable the **"Start application automatically at Windows startup"** checkbox in the Settings window and click **Save Settings**, OR
-- Run `install.bat` (which configures startup automatically).
+### Prerequisites
+- **Operating System**: Windows 11 / 10 / 8 / 7, or Linux / macOS (for compilation)
+- **Java**: Java Development Kit (JDK) 21 or higher
+- **Maven**: Apache Maven 3.6+
 
-To disable startup:
-- Uncheck the **"Start application automatically at Windows startup"** checkbox in Settings and click **Save Settings**, OR
-- Run `uninstall.bat` to completely remove the application and its startup registry keys.
+### Build Standalone Fat JAR
+To compile the source code, run tests, and package the shaded executable fat JAR:
+```bash
+mvn clean package
+```
+
+The output fat JAR will be located at:
+```
+target/WallpaperChanger-1.0.0.jar
+```
+
+### Running Unit Tests
+To execute all 18 automated unit tests:
+```bash
+mvn test
+```
+
+### Automated GitHub Releases (CI/CD)
+The project includes a GitHub Actions release pipeline ([`.github/workflows/release.yml`](file:///home/gaurang/projects/WallpaperChanger/.github/workflows/release.yml)). Whenever a git version tag is pushed (e.g. `v1.0.0`):
+1. GitHub Actions sets up Java 21 and runs `mvn clean package`.
+2. Bundles `WallpaperChanger.jar`, `install.bat`, `run.bat`, `uninstall.bat`, `run-background.vbs`, and a `QUICKSTART.txt` guide into `WallpaperChanger-windows.zip`.
+3. Automatically publishes a GitHub Release with the zip asset attached.
+
+To trigger a release:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ---
 
-## Configuration & Storage Locations
+## Configuration & File Locations
 
-Settings and credentials are kept securely in your Windows user profile:
-- Application Settings: `%USERPROFILE%\.wallpaperchanger\config.json`
-- OAuth Client Secrets: `%USERPROFILE%\.wallpaperchanger\credentials.json`
-- User OAuth Tokens: `%USERPROFILE%\.wallpaperchanger\tokens\`
-- Single Instance Locks: `%USERPROFILE%\.wallpaperchanger\app.lock` and `app.port`
+All application data is isolated within the user's home profile directory:
+
+| Resource | Path | Description |
+| :--- | :--- | :--- |
+| **Settings** | `%USERPROFILE%\.wallpaperchanger\config.json` | JSON configuration (rotation interval, Drive folder, style, etc.) |
+| **OAuth Credentials** | `%USERPROFILE%\.wallpaperchanger\credentials.json` | Google Cloud OAuth Client ID & Secret |
+| **OAuth Tokens** | `%USERPROFILE%\.wallpaperchanger\tokens\` | User authorization tokens generated during browser login |
+| **Instance Locks** | `%USERPROFILE%\.wallpaperchanger\app.lock` / `app.port` | Concurrency lock and loopback IPC port |
+| **Installed App** | `%LOCALAPPDATA%\WallpaperChanger\` | Application JAR and launcher script (when using `install.bat`) |
+| **Start Menu** | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Wallpaper Changer.lnk` | Start Menu shortcut |
+
+---
+
+## Uninstallation
+
+To completely uninstall Wallpaper Changer:
+1. Double-click [`uninstall.bat`](file:///home/gaurang/projects/WallpaperChanger/uninstall.bat).
+2. The script will:
+   - Terminate any running Wallpaper Changer background processes.
+   - Remove the Windows Startup Registry key (`HKCU\...\Run\WallpaperChanger`).
+   - Delete the Start Menu shortcut.
+   - Remove the `%LOCALAPPDATA%\WallpaperChanger\` installation directory.
+3. *(Optional)* To delete saved configuration and login tokens, remove the `%USERPROFILE%\.wallpaperchanger` folder.
