@@ -1,0 +1,78 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: mvn clean package
+
+      - name: Prepare Windows Distribution Bundle
+        run: |
+          mkdir -p dist/WallpaperChanger
+          cp target/WallpaperChanger-1.0.0.jar dist/WallpaperChanger/WallpaperChanger.jar
+          cp target/WallpaperChanger-1.0.0.jar dist/WallpaperChanger/WallpaperChanger-1.0.0.jar
+          cp install.bat dist/WallpaperChanger/
+          cp run.bat dist/WallpaperChanger/
+          cp uninstall.bat dist/WallpaperChanger/
+          cp run-background.vbs dist/WallpaperChanger/
+          
+          cat << 'EOF' > dist/WallpaperChanger/QUICKSTART.txt
+          =====================================================
+            Wallpaper Changer for Windows
+          =====================================================
+
+          REQUIREMENTS:
+          - Windows 10 or 11
+          - Java Runtime (JRE / JDK) 21 or higher installed:
+            https://adoptium.net/temurin/releases/?version=21
+
+          HOW TO RUN:
+          1. Permanent Installation (Start Menu + Auto-Startup):
+             Double-click 'install.bat'
+
+          2. Run Portable (Without installing):
+             Double-click 'run.bat'
+
+          3. Uninstall:
+             Double-click 'uninstall.bat'
+
+          GOOGLE DRIVE SETUP:
+          Follow the setup guide in the online documentation:
+          https://github.com/${{ github.repository }}#google-drive-setup-guide
+          =====================================================
+          EOF
+          
+          cd dist
+          zip -r WallpaperChanger-windows.zip WallpaperChanger
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/WallpaperChanger-windows.zip
+            target/WallpaperChanger-1.0.0.jar
+          generate_release_notes: true
+          draft: false
+          prerelease: false

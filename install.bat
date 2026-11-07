@@ -6,14 +6,19 @@ echo ===================================================
 echo   WallpaperChanger - Automatic Windows Installer
 echo ===================================================
 
-set JAR_SRC=target\WallpaperChanger-1.0.0.jar
-if not exist "%JAR_SRC%" (
+set JAR_SRC=
+if exist "%~dp0WallpaperChanger.jar" set "JAR_SRC=%~dp0WallpaperChanger.jar"
+if not defined JAR_SRC if exist "%~dp0WallpaperChanger-1.0.0.jar" set "JAR_SRC=%~dp0WallpaperChanger-1.0.0.jar"
+if not defined JAR_SRC if exist "%~dp0target\WallpaperChanger-1.0.0.jar" set "JAR_SRC=%~dp0target\WallpaperChanger-1.0.0.jar"
+
+if not defined JAR_SRC (
     echo Building project with Maven...
     call mvn clean package
+    if exist "%~dp0target\WallpaperChanger-1.0.0.jar" set "JAR_SRC=%~dp0target\WallpaperChanger-1.0.0.jar"
 )
 
-if not exist "%JAR_SRC%" (
-    echo [ERROR] Build failed or JAR not found: %JAR_SRC%
+if not defined JAR_SRC (
+    echo [ERROR] Build failed or JAR not found.
     echo Please make sure Java 21 and Maven are installed.
     pause
     exit /b 1

@@ -6,10 +6,16 @@
 Set objFSO = CreateObject("Scripting.FileSystemObject")
 strScriptDir = objFSO.GetParentFolderName(WScript.ScriptFullName)
 
-strJarPath = strScriptDir & "\target\WallpaperChanger-1.0.0.jar"
+strJarPath = strScriptDir & "\WallpaperChanger.jar"
+If Not objFSO.FileExists(strJarPath) Then
+    strJarPath = strScriptDir & "\WallpaperChanger-1.0.0.jar"
+End If
+If Not objFSO.FileExists(strJarPath) Then
+    strJarPath = strScriptDir & "\target\WallpaperChanger-1.0.0.jar"
+End If
 
 If Not objFSO.FileExists(strJarPath) Then
-    MsgBox "WallpaperChanger JAR not found at: " & vbCrLf & strJarPath & vbCrLf & vbCrLf & "Please run 'run.bat' or 'install.bat' first.", vbCritical, "Wallpaper Changer"
+    MsgBox "WallpaperChanger JAR not found." & vbCrLf & vbCrLf & "Please run 'run.bat' or 'install.bat' first.", vbCritical, "Wallpaper Changer"
     WScript.Quit 1
 End If
 
