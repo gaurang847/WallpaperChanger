@@ -12,11 +12,8 @@
   - [Option 2: Run Portable (In-Place)](#option-2-run-portable-in-place)
   - [Option 3: Silent Background Launch](#option-3-silent-background-launch)
 - [Google Drive Setup Guide](#google-drive-setup-guide)
-  - [Step 1: Create a Google Cloud Project](#step-1-create-a-google-cloud-project)
-  - [Step 2: Enable the Google Drive API](#step-2-enable-the-google-drive-api)
-  - [Step 3: Configure the OAuth Consent Screen & Publish App](#step-3-configure-the-oauth-consent-screen--publish-app)
-  - [Step 4: Generate and Download Credentials JSON](#step-4-generate-and-download-credentials-json)
-  - [Step 5: Connect in Wallpaper Changer](#step-5-connect-in-wallpaper-changer)
+  - [Method 1: Service Account (Recommended - Never Expires!)](#method-1-service-account-recommended---never-expires)
+  - [Method 2: OAuth 2.0 User Client (Alternative)](#method-2-oauth-20-user-client-alternative)
 - [How It Works (Under the Hood)](#how-it-works-under-the-hood)
   - [Clean Local Storage ("Unset Deletion")](#clean-local-storage-unset-deletion)
   - [Single-Instance Enforcement & IPC](#single-instance-enforcement--ipc)
@@ -106,63 +103,72 @@ javaw -jar WallpaperChanger.jar --background
 
 ## Google Drive Setup Guide
 
-Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. Follow this step-by-step walkthrough:
-
-### Step 1: Create a Google Cloud Project
-1. Open the [Google Cloud Project Creation Page](https://console.cloud.google.com/projectcreate).
-2. Enter a **Project name** (e.g. `Wallpaper Changer`).
-3. Click **Create** and wait a few seconds. Ensure your new project is selected in the top navigation bar.
-
-### Step 2: Enable the Google Drive API
-1. Open the [Google Drive API Library Page](https://console.cloud.google.com/apis/library/drive.googleapis.com).
-2. Click the blue **Enable** button.
-
-### Step 3: Configure the OAuth Consent Screen & Publish App
-1. Open the [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent).
-2. Under **User Type**, select **External** and click **Create**.
-3. Fill in the required fields:
-   - **App name**: `Wallpaper Changer`
-   - **User support email**: Choose your email address.
-   - **Developer contact information**: Enter your email address.
-4. Click **Save and Continue**.
-5. **Scopes Screen**:
-   - Click **Add or Remove Scopes**.
-   - Search for `drive.readonly` and check `.../auth/drive.readonly` (*See and download all your Google Drive files*).
-   - Click **Update**, then **Save and Continue**.
-6. **Test Users Screen**:
-   - Click **+ Add Users** and enter your personal Gmail address.
-   - Click **Save and Continue**, then click **Back to Dashboard**.
-7. **Publish Your App (Critical for Permanent Login)**:
-   - On the OAuth Consent Screen dashboard, look under **Publishing status** near the top.
-   - Click the **PUBLISH APP** button and click **Confirm**.
-   - *(**Why this is important:** By default, Google puts new projects in "Testing" mode, which automatically expires login tokens every 7 days. Clicking "PUBLISH APP" changes the status to "In Production", granting permanent tokens so you never get logged out).*
-
-### Step 4: Generate and Download Credentials JSON
-1. Open the [Google Cloud Credentials Page](https://console.cloud.google.com/apis/credentials).
-2. Click **+ Create Credentials** at the top → select **OAuth client ID**.
-3. In the **Application type** dropdown, select **Desktop app**.
-4. Set **Name** to `Wallpaper Changer Desktop` and click **Create**.
-5. A popup titled *"OAuth client created"* will appear. Click **Download JSON** (this saves a file like `client_secret_xxxxxxxx.json` to your `Downloads` folder).
+Connecting Wallpaper Changer to your Google Drive takes about 2 minutes. You can choose either the **Service Account method (Recommended - never expires)** or the traditional **OAuth 2.0 method**:
 
 ---
 
-### Step 5: Connect in Wallpaper Changer
+### Method 1: Service Account (Recommended - Never Expires!)
 
+A **Google Service Account** acts as an automated background bot identity for your app.
+* **Benefits:** 
+  - **No 7-day token expiration!** Permanent credentials that never expire.
+  - **No web browser popups or login consent screens.**
+  - **No domain ownership or privacy policy requirements.**
+
+#### Step 1: Create a Google Cloud Project & Enable Drive API
+1. Open the [Google Cloud Project Creation Page](https://console.cloud.google.com/projectcreate) and name it `Wallpaper Changer` → click **Create**.
+2. Open the [Google Drive API Library Page](https://console.cloud.google.com/apis/library/drive.googleapis.com) → click **Enable**.
+
+#### Step 2: Create a Service Account & Download Key
+1. Open the [Service Accounts Page](https://console.cloud.google.com/iam-admin/serviceaccounts).
+2. Click **+ CREATE SERVICE ACCOUNT** at the top.
+   - Set **Service account name** to `Wallpaper Bot`.
+   - Click **Create and Continue**, then click **Done**.
+3. In the list, click on your newly created service account (or click the three dots `⋮` on the right → **Manage keys**).
+4. Go to the **KEYS** tab at the top → click **ADD KEY** → **Create new key**.
+5. Choose **JSON** and click **CREATE**.
+   - A `.json` private key file will download to your `Downloads` folder!
+6. Copy the **email address** of your service account (e.g. `wallpaper-bot@your-project.iam.gserviceaccount.com`).
+
+#### Step 3: Share Your Google Drive Wallpapers Folder
+1. Go to [Google Drive](https://drive.google.com/) and find your Wallpapers folder.
+2. Right-click the folder → click **Share**.
+3. Paste the service account email address, leave the role as **Viewer**, uncheck "Notify people", and click **Send / Share**.
+
+#### Step 4: Connect in Wallpaper Changer
 1. Open Wallpaper Changer (run `run.bat` or `install.bat`).
-2. Under **Google Drive Settings**, click the **Browse...** button next to **OAuth Credentials (.json)**.
-   - The file picker will automatically open in your `Downloads` folder with `.json` filtered.
-   - Select the JSON file you just downloaded.
-   - *Wallpaper Changer automatically creates a secure copy in your app directory so you can safely clear your Downloads folder later.*
-3. Click **Authenticate with Google**.
-   - Your default browser will open Google's authorization page.
-   - Sign in with the Gmail account you added under Test Users.
-   - If prompted with *"Google hasn't verified this app"*, click **Advanced** → **Go to Wallpaper Changer (unsafe)** → **Continue / Allow**.
-4. Copy the URL of your Google Drive wallpapers folder from your browser address bar:
-   ```
-   https://drive.google.com/drive/folders/1UUL26QCa7U7paRpxYDYNZUFwrNlQ74uh
-   ```
-5. Paste it into the **Drive Folder ID / URL** field in Settings.
-6. Click **Test Folder** to verify that images are detected, then click **Save Settings**!
+2. Under **Google Drive Settings**, click **Browse...** next to **OAuth / Service Account (.json)**.
+3. Select the JSON file you downloaded in Step 2.
+   - The app will automatically detect it as a Service Account!
+4. Paste your Drive folder URL in the **Drive Folder ID / URL** field.
+5. Click **Test Folder** to verify that images are detected, then click **Save Settings**!
+
+---
+
+### Method 2: OAuth 2.0 User Client (Alternative)
+
+If you prefer logging in with your personal Google account via your browser:
+
+#### Step 1: Create Project & Enable Drive API
+1. Create a project at [Google Cloud Project Creation](https://console.cloud.google.com/projectcreate).
+2. Enable the [Google Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com).
+
+#### Step 2: Configure OAuth Consent Screen
+1. Go to the [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent) → select **External** → click **Create**.
+2. Fill in App Name (`Wallpaper Changer`) and your email address.
+3. Under **Scopes**, add `.../auth/drive.readonly`.
+4. Under **Test Users**, add your personal Gmail address → click **Save**.
+   *(Note: In Testing mode, Google requires re-authenticating every 7 days unless published).*
+
+#### Step 3: Generate Desktop Credentials JSON
+1. Go to [Google Cloud Credentials](https://console.cloud.google.com/apis/credentials) → **+ Create Credentials** → **OAuth client ID**.
+2. Choose **Desktop app** → name it `Wallpaper Changer Desktop` → click **Create**.
+3. Click **Download JSON**.
+
+#### Step 4: Connect in Wallpaper Changer
+1. Open Wallpaper Changer → click **Browse...** → select the downloaded OAuth JSON.
+2. Click **Authenticate with Google** and complete the browser sign-in.
+3. Paste your Drive folder link and click **Save Settings**!
 
 ---
 

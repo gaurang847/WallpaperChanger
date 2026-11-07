@@ -1,11 +1,14 @@
 package com.masquerade817;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
@@ -37,9 +40,43 @@ public class DriveAPI {
     private static Drive cachedDriveService = null;
 
     /**
-     * Checks if valid stored user OAuth tokens exist without opening a browser.
+     * Checks if the active credentials file is a Google Service Account JSON.
+     */
+    public static boolean isServiceAccount() {
+        if (!hasCredentialsFile()) return false;
+        try (var in = getCredentialsInputStream()) {
+            var mapper = new ObjectMapper();
+            var node = mapper.readTree(in);
+            return node != null && node.has("type") && "service_account".equalsIgnoreCase(node.get("type").asText());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Retrieves the Service Account email address if active.
+     */
+    public static String getServiceAccountEmail() {
+        if (!hasCredentialsFile()) return null;
+        try (var in = getCredentialsInputStream()) {
+            var mapper = new ObjectMapper();
+            var node = mapper.readTree(in);
+            if (node != null && node.has("client_email")) {
+                return node.get("client_email").asText();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    /**
+     * Checks if valid stored credentials or OAuth tokens exist.
+     * Service Accounts are always authorized once the key file exists.
      */
     public static synchronized boolean isAuthorized() {
+        if (isServiceAccount()) {
+            return true;
+        }
         if (!Files.exists(TOKENS_PATH) || !Files.isDirectory(TOKENS_PATH)) {
             return false;
         }
@@ -51,7 +88,7 @@ public class DriveAPI {
     }
 
     /**
-     * Checks whether an OAuth client credentials file exists in any recognized location.
+     * Checks whether a credentials file exists in any recognized location.
      */
     public static boolean hasCredentialsFile() {
         var customPath = AppConfig.getInstance().data().customCredentialsPath();
@@ -72,7 +109,7 @@ public class DriveAPI {
     }
 
     /**
-     * Signs out by deleting stored tokens and resetting the client.
+     * Signs out by resetting the client and deleting any stored tokens.
      */
     public static synchronized void signOut() throws IOException {
         cachedDriveService = null;
@@ -114,19 +151,24 @@ public class DriveAPI {
         }
 
         throw new FileNotFoundException("""
-                Google OAuth credentials.json not found!
-                Please download your OAuth 2.0 Desktop credentials from Google Cloud Console,
-                and place the file at:
-                %s
-                or select it in the Wallpaper Changer Settings window.
-                """.formatted(DEFAULT_USER_CREDENTIALS_PATH.toAbsolutePath()));
+                Google credentials JSON not found!
+                Please download your Service Account Key or OAuth Desktop credentials,
+                and select it in the Wallpaper Changer Settings window.
+                """);
     }
 
     /**
-     * Creates an authorized Credential object using modern local server receiver.
+     * Creates an authorized HttpRequestInitializer.
+     * Supports both Service Accounts (direct key) and OAuth 2.0 Installed Apps.
      */
-    private static Credential getCredentials(final NetHttpTransport httpTransport) throws IOException {
+    @SuppressWarnings("deprecation")
+    private static HttpRequestInitializer getCredentials(final NetHttpTransport httpTransport) throws IOException {
         try (var in = getCredentialsInputStream()) {
+            if (isServiceAccount()) {
+                return GoogleCredential.fromStream(in, httpTransport, JSON_FACTORY)
+                        .createScoped(SCOPES);
+            }
+
             var clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
 
             if (!Files.exists(TOKENS_PATH)) {
@@ -159,7 +201,7 @@ public class DriveAPI {
     }
 
     /**
-     * Explicitly forces re-authentication (used by Settings GUI button).
+     * Explicitly forces authentication (used by Settings GUI button).
      */
     public static synchronized Drive authenticate() throws IOException, GeneralSecurityException {
         cachedDriveService = null;

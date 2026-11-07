@@ -445,24 +445,36 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private void updateAuthStatus() {
+        boolean isServiceAcc = DriveAPI.isServiceAccount();
         boolean authorized = DriveAPI.isAuthorized();
         boolean hasCreds = DriveAPI.hasCredentialsFile();
 
-        if (authorized) {
+        if (isServiceAcc) {
+            String email = DriveAPI.getServiceAccountEmail();
+            authStatusLabel.setText("● Service Account Ready");
+            authStatusLabel.setForeground(new Color(39, 174, 96));
+            authButton.setText("Test Connection");
+            signOutButton.setEnabled(false);
+            credHintLabel.setText("Share Drive folder with: " + (email != null ? email : "the Service Account") + " (Viewer)");
+            credHintLabel.setForeground(new Color(41, 128, 185));
+            credHintLabel.setToolTipText(email != null ? "Service Account: " + email : "");
+        } else if (authorized) {
             authStatusLabel.setText("● Connected to Google");
             authStatusLabel.setForeground(new Color(39, 174, 96));
             authButton.setText("Re-authenticate");
             signOutButton.setEnabled(true);
             credHintLabel.setText("✓ Connected. Google Drive OAuth tokens are active.");
             credHintLabel.setForeground(new Color(39, 174, 96));
+            credHintLabel.setToolTipText("");
         } else {
             authStatusLabel.setText("○ Not Authenticated");
             authStatusLabel.setForeground(new Color(192, 57, 43));
             authButton.setText("Authenticate with Google");
             signOutButton.setEnabled(false);
+            credHintLabel.setToolTipText("");
 
             if (!hasCreds) {
-                credHintLabel.setText("Step 1: Click 'Browse...' above to select your downloaded credentials JSON.");
+                credHintLabel.setText("Step 1: Click 'Browse...' above to select your Service Account or OAuth JSON.");
                 credHintLabel.setForeground(new Color(211, 84, 0));
             } else {
                 credHintLabel.setText("✓ Credentials ready! Step 2: Click 'Authenticate with Google' to sign in.");
@@ -477,7 +489,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         if (!DriveAPI.hasCredentialsFile()) {
             int pick = JOptionPane.showConfirmDialog(
                     this,
-                    "Google OAuth credentials JSON is required before authenticating.\n\n" +
+                    "Credentials JSON is required before authenticating.\n\n" +
                     "Would you like to select the JSON file you downloaded from Google Cloud?",
                     "Credentials Required",
                     JOptionPane.YES_NO_OPTION,
@@ -486,6 +498,46 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             if (pick == JOptionPane.YES_OPTION) {
                 onBrowseCredentials();
             }
+            return;
+        }
+
+        if (DriveAPI.isServiceAccount()) {
+            authButton.setEnabled(false);
+            authStatusLabel.setText("Testing Service Account...");
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    DriveAPI.authenticate();
+                    SwingUtilities.invokeLater(() -> {
+                        authButton.setEnabled(true);
+                        updateAuthStatus();
+                        String email = DriveAPI.getServiceAccountEmail();
+                        JOptionPane.showMessageDialog(
+                                SettingsFrame.this,
+                                "Service Account connection verified successfully!\n\n" +
+                                "Service Account Email:\n" + (email != null ? email : "") + "\n\n" +
+                                "Next Steps:\n" +
+                                "1. Right-click your wallpapers folder in Google Drive -> Share\n" +
+                                "2. Paste this email as 'Viewer'\n" +
+                                "3. Paste your folder URL below and click 'Test Folder'!",
+                                "Service Account Active",
+                                JOptionPane.INFORMATION_MESSAGE
+                        );
+                    });
+                } catch (Exception e) {
+                    SwingUtilities.invokeLater(() -> {
+                        authButton.setEnabled(true);
+                        updateAuthStatus();
+                        var msg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                        JOptionPane.showMessageDialog(
+                                SettingsFrame.this,
+                                "Service Account verification failed: " + msg,
+                                "Verification Error",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                    });
+                }
+            });
             return;
         }
 
@@ -596,12 +648,28 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             customCredentialsField.setText(targetPath.toAbsolutePath().toString());
             saveUIToConfig();
             updateAuthStatus();
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Credentials loaded successfully!\nNow click 'Authenticate with Google' to connect your account.",
-                    "Credentials Ready",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+
+            if (DriveAPI.isServiceAccount()) {
+                String email = DriveAPI.getServiceAccountEmail();
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Service Account key loaded successfully!\n\n" +
+                        "Service Account Email:\n" + (email != null ? email : "") + "\n\n" +
+                        "Next Steps:\n" +
+                        "1. Right-click your wallpapers folder in Google Drive -> Share\n" +
+                        "2. Paste this email as 'Viewer'\n" +
+                        "3. Paste your folder URL below and click 'Test Folder'!",
+                        "Service Account Ready (Permanent)",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } else {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "OAuth credentials loaded successfully!\nNow click 'Authenticate with Google' to sign in.",
+                        "Credentials Ready",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            }
         }
     }
 
