@@ -23,6 +23,7 @@ import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.Timer;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
@@ -36,6 +37,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.TrayIcon;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
@@ -65,6 +67,11 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     private JTextField customCredentialsField;
     private JButton browseCredentialsButton;
+
+    private JLabel serviceAccountLabel;
+    private JPanel serviceAccountRow;
+    private JTextField serviceAccountEmailField;
+    private JButton copyEmailButton;
 
     private JTextField localFolderField;
     private JButton browseFolderButton;
@@ -229,12 +236,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
         // Row 0: Credentials File (Step 1)
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
-        panel.add(new JLabel("OAuth Credentials (.json):"), gbc);
+        panel.add(new JLabel("Credentials (.json):"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
         var credRow = new JPanel(new BorderLayout(6, 0));
         customCredentialsField = new JTextField(24);
-        customCredentialsField.setToolTipText("Path to Google OAuth credentials JSON (downloaded from Google Cloud Console)");
+        customCredentialsField.setToolTipText("Path to Google Service Account Key or OAuth JSON");
 
         browseCredentialsButton = new JButton("Browse...");
         browseCredentialsButton.setToolTipText("Select the credentials JSON file downloaded from Google Cloud Console");
@@ -244,14 +251,35 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         credRow.add(browseCredentialsButton, BorderLayout.EAST);
         panel.add(credRow, gbc);
 
-        // Row 1: Credentials status / hint
-        gbc.gridx = 1; gbc.gridy = 1;
+        // Row 1: Service Account Email & Copy Button (Shown when Service Account is active)
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
+        serviceAccountLabel = new JLabel("Share with Email:");
+        panel.add(serviceAccountLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        serviceAccountRow = new JPanel(new BorderLayout(6, 0));
+        serviceAccountEmailField = new JTextField(24);
+        serviceAccountEmailField.setEditable(false);
+        serviceAccountEmailField.setBackground(new Color(245, 248, 252));
+        serviceAccountEmailField.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        serviceAccountEmailField.setToolTipText("Copy this email and share your Google Drive wallpaper folder with it as Viewer");
+
+        copyEmailButton = new JButton("Copy Email");
+        copyEmailButton.setToolTipText("Copy Service Account email to clipboard");
+        copyEmailButton.addActionListener(e -> onCopyServiceAccountEmail());
+
+        serviceAccountRow.add(serviceAccountEmailField, BorderLayout.CENTER);
+        serviceAccountRow.add(copyEmailButton, BorderLayout.EAST);
+        panel.add(serviceAccountRow, gbc);
+
+        // Row 2: Credentials status / hint
+        gbc.gridx = 1; gbc.gridy = 2;
         credHintLabel = new JLabel(" ");
         credHintLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         panel.add(credHintLabel, gbc);
 
-        // Row 2: Account Authentication (Step 2)
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
+        // Row 3: Account Authentication (Step 2)
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
         panel.add(new JLabel("Google Account:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -270,8 +298,8 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         authRow.add(signOutButton);
         panel.add(authRow, gbc);
 
-        // Row 3: Drive Folder ID / URL (Step 3)
-        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
+        // Row 4: Drive Folder ID / URL (Step 3)
+        gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = 0;
         panel.add(new JLabel("Drive Folder ID / URL:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -286,10 +314,10 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         folderRow.add(testFolderButton, BorderLayout.EAST);
         panel.add(folderRow, gbc);
 
-        // Row 4: Folder test feedback
-        gbc.gridx = 1; gbc.gridy = 4;
+        // Row 5: Folder test feedback
+        gbc.gridx = 1; gbc.gridy = 5;
         testFolderResultLabel = new JLabel(" ");
-        testFolderResultLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        testFolderResultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         panel.add(testFolderResultLabel, gbc);
 
         return panel;
@@ -451,35 +479,56 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
         if (isServiceAcc) {
             String email = DriveAPI.getServiceAccountEmail();
+            serviceAccountLabel.setVisible(true);
+            serviceAccountRow.setVisible(true);
+            serviceAccountEmailField.setText(email != null ? email : "");
+
             authStatusLabel.setText("● Service Account Ready");
             authStatusLabel.setForeground(new Color(39, 174, 96));
             authButton.setText("Test Connection");
             signOutButton.setEnabled(false);
-            credHintLabel.setText("Share Drive folder with: " + (email != null ? email : "the Service Account") + " (Viewer)");
+
+            credHintLabel.setText("In Google Drive: Right-click wallpaper folder → Share → paste this email as 'Viewer'.");
             credHintLabel.setForeground(new Color(41, 128, 185));
-            credHintLabel.setToolTipText(email != null ? "Service Account: " + email : "");
-        } else if (authorized) {
-            authStatusLabel.setText("● Connected to Google");
-            authStatusLabel.setForeground(new Color(39, 174, 96));
-            authButton.setText("Re-authenticate");
-            signOutButton.setEnabled(true);
-            credHintLabel.setText("✓ Connected. Google Drive OAuth tokens are active.");
-            credHintLabel.setForeground(new Color(39, 174, 96));
             credHintLabel.setToolTipText("");
         } else {
-            authStatusLabel.setText("○ Not Authenticated");
-            authStatusLabel.setForeground(new Color(192, 57, 43));
-            authButton.setText("Authenticate with Google");
-            signOutButton.setEnabled(false);
-            credHintLabel.setToolTipText("");
+            serviceAccountLabel.setVisible(false);
+            serviceAccountRow.setVisible(false);
 
-            if (!hasCreds) {
-                credHintLabel.setText("Step 1: Click 'Browse...' above to select your Service Account or OAuth JSON.");
-                credHintLabel.setForeground(new Color(211, 84, 0));
+            if (authorized) {
+                authStatusLabel.setText("● Connected to Google (OAuth)");
+                authStatusLabel.setForeground(new Color(39, 174, 96));
+                authButton.setText("Re-authenticate");
+                signOutButton.setEnabled(true);
+                credHintLabel.setText("Connected: Google Drive OAuth tokens are active.");
+                credHintLabel.setForeground(new Color(39, 174, 96));
+                credHintLabel.setToolTipText("");
             } else {
-                credHintLabel.setText("✓ Credentials ready! Step 2: Click 'Authenticate with Google' to sign in.");
-                credHintLabel.setForeground(new Color(41, 128, 185));
+                authStatusLabel.setText("○ Not Authenticated");
+                authStatusLabel.setForeground(new Color(192, 57, 43));
+                authButton.setText("Authenticate with Google");
+                signOutButton.setEnabled(false);
+                credHintLabel.setToolTipText("");
+
+                if (!hasCreds) {
+                    credHintLabel.setText("Step 1: Click 'Browse...' above to select your Service Account or OAuth JSON.");
+                    credHintLabel.setForeground(new Color(211, 84, 0));
+                } else {
+                    credHintLabel.setText("Credentials ready: Step 2: Click 'Authenticate with Google' to sign in.");
+                    credHintLabel.setForeground(new Color(41, 128, 185));
+                }
             }
+        }
+    }
+
+    private void onCopyServiceAccountEmail() {
+        String email = serviceAccountEmailField.getText().strip();
+        if (!email.isBlank()) {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(email), null);
+            copyEmailButton.setText("Copied!");
+            var timer = new Timer(2000, evt -> copyEmailButton.setText("Copy Email"));
+            timer.setRepeats(false);
+            timer.start();
         }
     }
 
@@ -610,11 +659,11 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             testFolderButton.setEnabled(true);
             if (error == null) {
                 testFolderResultLabel.setForeground(new Color(39, 174, 96));
-                testFolderResultLabel.setText("✓ Success: Found %d wallpaper image(s) in folder.".formatted(count));
+                testFolderResultLabel.setText("Success: Found %d wallpaper image(s) in folder.".formatted(count));
             } else {
                 testFolderResultLabel.setForeground(new Color(192, 57, 43));
                 var cause = error.getCause() != null ? error.getCause().getMessage() : error.getMessage();
-                testFolderResultLabel.setText("✗ Failed: " + cause);
+                testFolderResultLabel.setText("Error: " + cause);
             }
         }));
     }
@@ -902,5 +951,13 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     public JButton getChangeNowButton() {
         return changeNowButton;
+    }
+
+    public JTextField getServiceAccountEmailField() {
+        return serviceAccountEmailField;
+    }
+
+    public JButton getCopyEmailButton() {
+        return copyEmailButton;
     }
 }
