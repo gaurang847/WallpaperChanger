@@ -102,17 +102,54 @@ javaw -jar target\WallpaperChanger-1.0.0.jar --background
 
 ## Google Drive Setup Guide
 
-### 1. Google OAuth Client Credentials (`credentials.json`)
-For security and privacy, sensitive client secrets are **never committed to git**.
+### 1. How to Create Your Google OAuth `credentials.json` (Takes ~2 minutes)
 
-To connect your application:
-1. Download your OAuth 2.0 Client credentials from the [Google Cloud Console](https://console.cloud.google.com/) (Application type: **Desktop App**).
-2. Either:
-   - Place the file at: `%USERPROFILE%\.wallpaperchanger\credentials.json`, or
-   - In the Settings window, click **Browse...** next to **Custom credentials.json**.
-3. **You only need to do this once on your PC.** The application remembers the path across reboots and background syncs.
+Google requires an OAuth 2.0 Client ID so desktop applications can connect to Google Drive. Follow these exact steps:
 
-*(A placeholder template is provided in `src/main/resources/credentials.example.json`).*
+#### Step 1: Create a Project in Google Cloud
+1. Go to the [Google Cloud Project Creation Page](https://console.cloud.google.com/projectcreate).
+2. Enter a **Project name** (e.g., `Wallpaper Changer`).
+3. Click **Create** and wait a few seconds for the project to be created, then ensure it is selected in the top navigation bar.
+
+#### Step 2: Enable the Google Drive API
+1. Open the [Google Drive API Library Page](https://console.cloud.google.com/apis/library/drive.googleapis.com).
+2. Click the blue **Enable** button.
+
+#### Step 3: Configure the OAuth Consent Screen
+1. Go to the [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent).
+2. Under **User Type**, select **External** and click **Create**.
+3. Fill in the required fields:
+   - **App name**: `Wallpaper Changer`
+   - **User support email**: Choose your email address.
+   - **Developer contact information**: Enter your email address.
+4. Click **Save and Continue**.
+5. **Scopes** screen:
+   - Click **Add or Remove Scopes**.
+   - Search for `drive.readonly` and check the box for `.../auth/drive.readonly` (*See and download all your Google Drive files*).
+   - Click **Update**, then **Save and Continue**.
+6. **Test Users** screen *(Important)*:
+   - Click **+ Add Users**.
+   - Enter your Gmail address (the Google account whose Drive contains your wallpapers).
+   - Click **Save and Continue**, then click **Back to Dashboard**.
+
+#### Step 4: Generate and Download `credentials.json`
+1. Go to the [Google Cloud Credentials Page](https://console.cloud.google.com/apis/credentials).
+2. Click **+ Create Credentials** at the top and select **OAuth client ID**.
+3. In the **Application type** dropdown, select **Desktop app**.
+4. Set **Name** to `Wallpaper Changer Desktop` (or any name you prefer) and click **Create**.
+5. A popup window titled *"OAuth client created"* will appear. Click **Download JSON**.
+
+#### Step 5: Place the File on Your PC
+1. Rename the downloaded file to `credentials.json` (if it has a long name like `client_secret_xxxx.json`).
+2. Move it to:
+   ```cmd
+   %USERPROFILE%\.wallpaperchanger\credentials.json
+   ```
+   *(For example: `C:\Users\YourUsername\.wallpaperchanger\credentials.json`)*
+   
+   **Alternatively**, you can save it anywhere on your PC and click **Browse...** next to **Custom credentials.json** in the Wallpaper Changer Settings window.
+
+---
 
 ### 2. Connect Your Google Account
 1. In the Wallpaper Changer Settings window, click **Authenticate with Google**.
