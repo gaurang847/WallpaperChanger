@@ -255,5 +255,5 @@ To completely uninstall Wallpaper Changer:
    - Terminate any running Wallpaper Changer background processes.
    - Remove the Windows Startup Registry key (`HKCU\...\Run\WallpaperChanger`).
    - Delete the Start Menu shortcut.
-   - Remove the `%LOCALAPPDATA%\WallpaperChanger\` installation directory.
-3. *(Optional)* To delete saved configuration and login tokens, remove the `%USERPROFILE%\.wallpaperchanger` folder.
+   - Remove the `%LOCALAPPDATA%\WallpaperChanger\` application directory.
+   - Prompt whether you want to delete your saved settings and Google credentials (`%USERPROFILE%\.wallpaperchanger\`).
