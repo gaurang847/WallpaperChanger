@@ -141,10 +141,22 @@ public class WallpaperSyncService {
             }
 
             notifyProgress("Checking Google Drive folder...");
-            var images = driveConnector.getImagesFromDriveFolder(folderId);
+            var images = driveConnector.getImagesFromDriveFolder(
+                    folderId,
+                    cfg.includeSubfolders(),
+                    cfg.subfolderDepth()
+            );
 
             if (images.isEmpty()) {
-                throw new IllegalStateException("No wallpaper images found in Google Drive folder: " + folderId);
+                String emptyMsg = cfg.includeSubfolders()
+                        ? "No wallpaper images found in Google Drive folder or its subfolders."
+                        : "No wallpaper images found in Google Drive folder. If images are in subfolders, enable 'Include subfolders'.";
+                System.out.println("[WallpaperSyncService] " + emptyMsg + " Existing desktop wallpaper was kept.");
+                this.lastStatusMessage = emptyMsg;
+                this.nextSyncTime = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(config.data().frequencyMinutes()));
+                notifySyncFailed(emptyMsg, null);
+                notifyScheduleUpdated(this.nextSyncTime);
+                return false;
             }
 
             // 2. Select random wallpaper

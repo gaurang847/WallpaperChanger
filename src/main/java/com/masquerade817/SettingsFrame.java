@@ -63,6 +63,9 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     private JTextField driveFolderField;
     private JButton testFolderButton;
+    private JCheckBox includeSubfoldersCheckbox;
+    private JLabel depthLabel;
+    private JComboBox<String> depthCombo;
     private JLabel testFolderResultLabel;
 
     private JTextField customCredentialsField;
@@ -314,8 +317,34 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         folderRow.add(testFolderButton, BorderLayout.EAST);
         panel.add(folderRow, gbc);
 
-        // Row 5: Folder test feedback
-        gbc.gridx = 1; gbc.gridy = 5;
+        // Row 5: Subfolders & Depth settings
+        gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 0;
+        panel.add(new JLabel("Subfolders:"), gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        var subfolderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        includeSubfoldersCheckbox = new JCheckBox("Include subfolders");
+        includeSubfoldersCheckbox.setToolTipText("Search for wallpapers inside subfolders within this Drive folder");
+        includeSubfoldersCheckbox.addActionListener(e -> updateSubfolderControlsEnabled());
+
+        depthLabel = new JLabel("Depth:");
+        String[] depthOptions = {
+                "1 level (Direct subfolders only)",
+                "2 levels",
+                "3 levels (Recommended)",
+                "5 levels (Deep search)",
+                "10 levels (Max / All)"
+        };
+        depthCombo = new JComboBox<>(depthOptions);
+        depthCombo.setToolTipText("How many nested subfolder levels to explore");
+
+        subfolderRow.add(includeSubfoldersCheckbox);
+        subfolderRow.add(depthLabel);
+        subfolderRow.add(depthCombo);
+        panel.add(subfolderRow, gbc);
+
+        // Row 6: Folder test feedback
+        gbc.gridx = 1; gbc.gridy = 6;
         testFolderResultLabel = new JLabel(" ");
         testFolderResultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         panel.add(testFolderResultLabel, gbc);
@@ -644,6 +673,9 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             return;
         }
 
+        boolean includeSubfolders = includeSubfoldersCheckbox.isSelected();
+        int depth = getSelectedSubfolderDepth();
+
         testFolderButton.setEnabled(false);
         testFolderResultLabel.setForeground(Color.DARK_GRAY);
         testFolderResultLabel.setText("Connecting to Google Drive...");
@@ -651,15 +683,28 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         CompletableFuture.supplyAsync(() -> {
             try {
                 var connector = new DriveConnector();
-                return connector.countImagesInFolder(folderId);
+                return connector.countImagesInFolder(folderId, includeSubfolders, depth);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }).whenComplete((count, error) -> SwingUtilities.invokeLater(() -> {
             testFolderButton.setEnabled(true);
             if (error == null) {
-                testFolderResultLabel.setForeground(new Color(39, 174, 96));
-                testFolderResultLabel.setText("Success: Found %d wallpaper image(s) in folder.".formatted(count));
+                if (count > 0) {
+                    testFolderResultLabel.setForeground(new Color(39, 174, 96));
+                    if (includeSubfolders) {
+                        testFolderResultLabel.setText("Success: Found %d wallpaper image(s) (including subfolders).".formatted(count));
+                    } else {
+                        testFolderResultLabel.setText("Success: Found %d wallpaper image(s) in folder.".formatted(count));
+                    }
+                } else {
+                    testFolderResultLabel.setForeground(new Color(211, 84, 0));
+                    if (includeSubfolders) {
+                        testFolderResultLabel.setText("Warning: Connected, but found 0 images across folder and subfolders.");
+                    } else {
+                        testFolderResultLabel.setText("Warning: Found 0 images in root folder. If images are in subfolders, enable 'Include subfolders'.");
+                    }
+                }
             } else {
                 testFolderResultLabel.setForeground(new Color(192, 57, 43));
                 var cause = error.getCause() != null ? error.getCause().getMessage() : error.getMessage();
@@ -794,6 +839,38 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             default -> "Fill / Stretch";
         };
         styleCombo.setSelectedItem(styleName);
+
+        includeSubfoldersCheckbox.setSelected(data.includeSubfolders());
+        setDepthComboFromValue(data.subfolderDepth());
+        updateSubfolderControlsEnabled();
+    }
+
+    private void updateSubfolderControlsEnabled() {
+        boolean selected = includeSubfoldersCheckbox.isSelected();
+        depthLabel.setEnabled(selected);
+        depthCombo.setEnabled(selected);
+    }
+
+    private int getSelectedSubfolderDepth() {
+        String sel = (String) depthCombo.getSelectedItem();
+        if (sel == null) return 3;
+        if (sel.startsWith("1 level")) return 1;
+        if (sel.startsWith("2 levels")) return 2;
+        if (sel.startsWith("3 levels")) return 3;
+        if (sel.startsWith("5 levels")) return 5;
+        if (sel.startsWith("10 levels")) return 10;
+        return 3;
+    }
+
+    private void setDepthComboFromValue(int depth) {
+        String item = switch (depth) {
+            case 1 -> "1 level (Direct subfolders only)";
+            case 2 -> "2 levels";
+            case 5 -> "5 levels (Deep search)";
+            case 10 -> "10 levels (Max / All)";
+            default -> "3 levels (Recommended)";
+        };
+        depthCombo.setSelectedItem(item);
     }
 
     private void saveUIToConfig() {
@@ -822,10 +899,14 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         var styleSel = (String) styleCombo.getSelectedItem();
         var styleVal = WallpaperSetter.toRegistryStyle(styleSel != null ? styleSel : "Fill / Stretch");
 
+        boolean includeSubfolders = includeSubfoldersCheckbox.isSelected();
+        int subfolderDepth = getSelectedSubfolderDepth();
+
         var current = config.data();
         var updated = new ConfigData(
                 folderId, localPath, minutes, deleteUnset, startStartup,
-                credPath, current.lastWallpaperPath(), current.lastWallpaperDriveId(), styleVal
+                credPath, current.lastWallpaperPath(), current.lastWallpaperDriveId(), styleVal,
+                includeSubfolders, subfolderDepth
         );
         config.update(updated);
         updateAuthStatus();
@@ -895,9 +976,14 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     public void onSyncFailed(String reason, Throwable error) {
         SwingUtilities.invokeLater(() -> {
             changeNowButton.setEnabled(true);
-            String display = truncateFileName(reason, 50);
-            statusLabel.setText("Status: Error: " + display);
-            statusLabel.setToolTipText("Error: " + reason);
+            String display = truncateFileName(reason, 55);
+            if (reason != null && reason.startsWith("No wallpaper images found")) {
+                statusLabel.setText("Status: Warning: " + display);
+                statusLabel.setToolTipText("Warning: " + reason);
+            } else {
+                statusLabel.setText("Status: Error: " + display);
+                statusLabel.setToolTipText("Error: " + reason);
+            }
         });
     }
 
@@ -959,5 +1045,13 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     public JButton getCopyEmailButton() {
         return copyEmailButton;
+    }
+
+    public JCheckBox getIncludeSubfoldersCheckbox() {
+        return includeSubfoldersCheckbox;
+    }
+
+    public JComboBox<String> getDepthCombo() {
+        return depthCombo;
     }
 }

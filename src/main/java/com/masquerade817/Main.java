@@ -82,6 +82,8 @@ public class Main {
 
         // Listen for sync events to display System Tray notifications
         syncService.addListener(new WallpaperSyncService.SyncListener() {
+            private String lastFailureReason = null;
+
             @Override
             public void onSyncStarted() {
             }
@@ -92,6 +94,7 @@ public class Main {
 
             @Override
             public void onSyncSuccess(String wallpaperName, Path localPath) {
+                lastFailureReason = null;
                 trayManager.showNotification(
                         "Wallpaper Changed",
                         "New desktop background set: " + wallpaperName,
@@ -101,11 +104,15 @@ public class Main {
 
             @Override
             public void onSyncFailed(String reason, Throwable error) {
-                trayManager.showNotification(
-                        "Wallpaper Sync Warning",
-                        reason,
-                        TrayIcon.MessageType.WARNING
-                );
+                // Throttle notifications so repeated intervals with the same empty/warning state do not spam balloons
+                if (!java.util.Objects.equals(reason, lastFailureReason)) {
+                    lastFailureReason = reason;
+                    trayManager.showNotification(
+                            "Wallpaper Sync Warning",
+                            reason,
+                            TrayIcon.MessageType.WARNING
+                    );
+                }
             }
 
             @Override

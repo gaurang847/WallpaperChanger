@@ -28,6 +28,7 @@ public class DriveConnectorTest {
         assertTrue(connector.isImageFile("document", "image/jpeg"));
         assertTrue(connector.isImageFile("vector", "image/png"));
         assertFalse(connector.isImageFile("readme.txt", "text/plain"));
+        assertFalse(connector.isImageFile("subfolder_name", "application/vnd.google-apps.folder"));
     }
 
     @Test
@@ -35,6 +36,17 @@ public class DriveConnectorTest {
         assertTrue(connector.isImageFile("photo.JPG", "application/octet-stream"));
         assertTrue(connector.isImageFile("artwork.png", null));
         assertFalse(connector.isImageFile("archive.zip", null));
+        assertFalse(connector.isImageFile("document.pdf", "application/pdf"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testGetImagesFromDriveFolderThrowsOnBlankId() throws Exception {
+        connector.getImagesFromDriveFolder("");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCountImagesInFolderThrowsOnNullId() throws Exception {
+        connector.countImagesInFolder(null, true, 3);
     }
 
     @Test

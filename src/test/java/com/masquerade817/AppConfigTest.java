@@ -54,4 +54,47 @@ public class AppConfigTest {
         assertEquals("drive123", updated.lastWallpaperDriveId());
         assertEquals(data.frequencyMinutes(), updated.frequencyMinutes());
     }
+
+    @Test
+    public void testSubfolderSettingsDefaultsAndWithMethods() {
+        var data = AppConfig.ConfigData.defaultSettings();
+        assertFalse(data.includeSubfolders());
+        assertEquals(3, data.subfolderDepth());
+
+        var updated = data.withSubfolders(true, 5);
+        assertTrue(updated.includeSubfolders());
+        assertEquals(5, updated.subfolderDepth());
+    }
+
+    @Test
+    public void testSubfolderDepthSanitization() {
+        var data = new AppConfig.ConfigData(
+                "folder", "C:\\path", 30, true, true, "", "", "", "2", true, 0
+        );
+        assertEquals(3, data.subfolderDepth());
+
+        var negative = new AppConfig.ConfigData(
+                "folder", "C:\\path", 30, true, true, "", "", "", "2", true, -10
+        );
+        assertEquals(3, negative.subfolderDepth());
+    }
+
+    @Test
+    public void testBackwardCompatibilityDeserializationWithoutSubfolderFields() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String jsonWithoutSubfolderKeys = """
+                {
+                    "driveFolderId": "folder123",
+                    "localFolderPath": "/local/path",
+                    "frequencyMinutes": 15,
+                    "deleteUnsetWallpaper": true,
+                    "startOnStartup": false,
+                    "wallpaperStyle": "6"
+                }
+                """;
+        var parsed = mapper.readValue(jsonWithoutSubfolderKeys, AppConfig.ConfigData.class);
+        assertEquals("folder123", parsed.driveFolderId());
+        assertFalse(parsed.includeSubfolders());
+        assertEquals(3, parsed.subfolderDepth());
+    }
 }
