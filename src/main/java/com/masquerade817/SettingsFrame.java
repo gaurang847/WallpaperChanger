@@ -309,6 +309,11 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         var folderRow = new JPanel(new BorderLayout(6, 0));
         driveFolderField = new JTextField(24);
         driveFolderField.setToolTipText("Enter Drive folder ID or paste full Google Drive folder URL");
+        driveFolderField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { clearTestFeedback(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { clearTestFeedback(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { clearTestFeedback(); }
+        });
 
         testFolderButton = new JButton("Test Folder");
         testFolderButton.addActionListener(e -> onTestFolderClicked());
@@ -325,22 +330,31 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         var subfolderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         includeSubfoldersCheckbox = new JCheckBox("Include subfolders");
         includeSubfoldersCheckbox.setToolTipText("Search for wallpapers inside subfolders within this Drive folder");
-        includeSubfoldersCheckbox.addActionListener(e -> updateSubfolderControlsEnabled());
+        includeSubfoldersCheckbox.addActionListener(e -> {
+            updateSubfolderControlsEnabled();
+            clearTestFeedback();
+        });
 
         depthLabel = new JLabel("Depth:");
         depthCombo = new JComboBox<>(SubfolderDepth.values());
         depthCombo.setToolTipText("How many nested subfolder levels to explore");
+        depthCombo.addActionListener(e -> clearTestFeedback());
 
         subfolderRow.add(includeSubfoldersCheckbox);
         subfolderRow.add(depthLabel);
         subfolderRow.add(depthCombo);
         panel.add(subfolderRow, gbc);
 
-        // Row 6: Folder test feedback
+        // Row 6: Folder test feedback (hidden until user clicks 'Test Folder' to avoid extra bottom space)
         gbc.gridx = 1; gbc.gridy = 6;
-        testFolderResultLabel = new JLabel(" ");
+        gbc.insets = new Insets(2, 4, 2, 4);
+        testFolderResultLabel = new JLabel();
         testFolderResultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        testFolderResultLabel.setVisible(false);
         panel.add(testFolderResultLabel, gbc);
+
+        // Reset insets for any subsequent components
+        gbc.insets = new Insets(4, 4, 4, 4);
 
         return panel;
     }
@@ -658,6 +672,14 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         }
     }
 
+    private void clearTestFeedback() {
+        if (testFolderResultLabel != null && testFolderResultLabel.isVisible()) {
+            testFolderResultLabel.setVisible(false);
+            testFolderResultLabel.setText("");
+            pack();
+        }
+    }
+
     private void onTestFolderClicked() {
         var input = driveFolderField.getText();
         var folderId = AppConfig.extractDriveFolderId(input);
@@ -670,8 +692,10 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         int depth = getSelectedSubfolderDepth();
 
         testFolderButton.setEnabled(false);
+        testFolderResultLabel.setVisible(true);
         testFolderResultLabel.setForeground(Color.DARK_GRAY);
         testFolderResultLabel.setText("Connecting to Google Drive...");
+        pack();
 
         CompletableFuture.supplyAsync(() -> {
             try {
@@ -682,6 +706,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
             }
         }).whenComplete((count, error) -> SwingUtilities.invokeLater(() -> {
             testFolderButton.setEnabled(true);
+            testFolderResultLabel.setVisible(true);
             if (error == null) {
                 if (count > 0) {
                     testFolderResultLabel.setForeground(new Color(39, 174, 96));
@@ -703,6 +728,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
                 var cause = error.getCause() != null ? error.getCause().getMessage() : error.getMessage();
                 testFolderResultLabel.setText("Error: " + cause);
             }
+            pack();
         }));
     }
 
