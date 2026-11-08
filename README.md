@@ -34,10 +34,12 @@
    - Maintain a single Google Drive folder of wallpapers accessible across all your Windows devices.
    - Accepts either a Google Drive folder ID or a standard shareable browser link.
    - Automatically detects valid images (`.jpg`, `.jpeg`, `.png`, `.bmp`, `.webp`) and excludes trashed items.
+   - **Subfolder Search**: Optionally traverse nested subfolders with selectable search depth (from 1 level up to 10 levels).
 
 2. **Zero Local Clutter (Automatic Disk Cleanup)**:
    - Keeps only the currently active wallpaper on your computer.
    - Previously downloaded wallpapers are automatically removed when a new one is applied, saving disk space.
+   - Safely preserves your current desktop wallpaper if the Drive folder is ever empty.
 
 3. **Silent System Tray Operation**:
    - Runs quietly in the background without cluttering your taskbar.
@@ -203,7 +205,7 @@ target/WallpaperChanger-1.0.0.jar
 ```
 
 ### Running Unit Tests
-To execute all 18 automated unit tests:
+To execute all 35 automated unit tests:
 ```bash
 mvn test
 ```

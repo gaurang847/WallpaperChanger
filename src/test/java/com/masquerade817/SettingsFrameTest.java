@@ -48,6 +48,8 @@ public class SettingsFrameTest {
             assertNotNull(frame.getJMenuBar());
             assertEquals(1, frame.getJMenuBar().getMenuCount());
             assertEquals("File", frame.getJMenuBar().getMenu(0).getText());
+            assertNotNull(frame.getIncludeSubfoldersCheckbox());
+            assertNotNull(frame.getDepthCombo());
         } finally {
             frame.dispose();
         }

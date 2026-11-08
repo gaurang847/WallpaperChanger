@@ -34,26 +34,59 @@ public class AppConfig {
             String customCredentialsPath,
             String lastWallpaperPath,
             String lastWallpaperDriveId,
-            String wallpaperStyle
+            String wallpaperStyle,
+            boolean includeSubfolders,
+            int subfolderDepth
     ) {
+        public ConfigData {
+            if (subfolderDepth <= 0) {
+                subfolderDepth = 3;
+            }
+        }
+
+        public ConfigData(
+                String driveFolderId,
+                String localFolderPath,
+                int frequencyMinutes,
+                boolean deleteUnsetWallpaper,
+                boolean startOnStartup,
+                String customCredentialsPath,
+                String lastWallpaperPath,
+                String lastWallpaperDriveId,
+                String wallpaperStyle
+        ) {
+            this(driveFolderId, localFolderPath, frequencyMinutes, deleteUnsetWallpaper, startOnStartup,
+                    customCredentialsPath, lastWallpaperPath, lastWallpaperDriveId, wallpaperStyle, false, 3);
+        }
+
         public static ConfigData defaultSettings() {
             var defaultLocal = Path.of(System.getProperty("user.home"), "Pictures", "WallpaperChanger")
                     .toAbsolutePath()
                     .toString();
-            return new ConfigData("", defaultLocal, 60, true, true, "", "", "", "2");
+            return new ConfigData("", defaultLocal, 60, true, true, "", "", "", "2", false, 3);
         }
 
         public ConfigData withLastWallpaper(String path, String driveId) {
             return new ConfigData(
                     driveFolderId, localFolderPath, frequencyMinutes, deleteUnsetWallpaper,
-                    startOnStartup, customCredentialsPath, path, driveId, wallpaperStyle
+                    startOnStartup, customCredentialsPath, path, driveId, wallpaperStyle,
+                    includeSubfolders, subfolderDepth
             );
         }
 
         public ConfigData withDriveFolderId(String folderId) {
             return new ConfigData(
                     folderId, localFolderPath, frequencyMinutes, deleteUnsetWallpaper,
-                    startOnStartup, customCredentialsPath, lastWallpaperPath, lastWallpaperDriveId, wallpaperStyle
+                    startOnStartup, customCredentialsPath, lastWallpaperPath, lastWallpaperDriveId, wallpaperStyle,
+                    includeSubfolders, subfolderDepth
+            );
+        }
+
+        public ConfigData withSubfolders(boolean include, int depth) {
+            return new ConfigData(
+                    driveFolderId, localFolderPath, frequencyMinutes, deleteUnsetWallpaper,
+                    startOnStartup, customCredentialsPath, lastWallpaperPath, lastWallpaperDriveId, wallpaperStyle,
+                    include, depth
             );
         }
     }
