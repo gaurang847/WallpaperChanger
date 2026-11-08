@@ -1,5 +1,9 @@
 # WallpaperChanger
 
+[![Built with Antigravity](https://img.shields.io/badge/Built%20with-Antigravity-4285F4?logo=google&logoColor=white)](https://deepmind.google)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/gaurang847)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/gaurang847)
+
 **WallpaperChanger** is a lightweight, modern Windows background application that keeps your desktop wallpaper synchronized with a centralized Google Drive folder. It periodically selects and downloads a random wallpaper from your Drive folder, applies it as your Windows desktop background, and automatically cleans up unset wallpapers so that your local disk stays completely uncluttered.
 
 ---
@@ -25,6 +29,7 @@
   - [Automated GitHub Releases (CI/CD)](#automated-github-releases-cicd)
 - [Configuration & File Locations](#configuration--file-locations)
 - [Uninstallation](#uninstallation)
+- [Support & Credits](#support--credits)
 
 ---
 
@@ -250,3 +255,16 @@ To completely uninstall Wallpaper Changer:
    - Delete the Start Menu shortcut.
    - Remove the `%LOCALAPPDATA%\WallpaperChanger\` application directory.
    - Prompt whether you want to delete your saved settings and Google credentials (`%USERPROFILE%\.wallpaperchanger\`).
+
+---
+
+## Support & Credits
+
+### Support the Developer
+If you find Wallpaper Changer helpful and want to support its maintenance and new features:
+
+- ☕ **Buy Me a Coffee**: [buymeacoffee.com/gaurang847](https://www.buymeacoffee.com/gaurang847)
+- 💖 **GitHub Sponsors**: [github.com/sponsors/gaurang847](https://github.com/sponsors/gaurang847)
+
+### Credits
+Built with 💙 using **[Antigravity](https://deepmind.google)** by Google DeepMind.
