@@ -48,9 +48,13 @@ public class WallpaperSyncService {
     private String lastStatusMessage = "Ready";
 
     public WallpaperSyncService(AppConfig config) {
+        this(config, new DriveConnector(), new WallpaperSetter());
+    }
+
+    WallpaperSyncService(AppConfig config, DriveConnector driveConnector, WallpaperSetter wallpaperSetter) {
         this.config = config;
-        this.driveConnector = new DriveConnector();
-        this.wallpaperSetter = new WallpaperSetter();
+        this.driveConnector = driveConnector;
+        this.wallpaperSetter = wallpaperSetter;
     }
 
     public void addListener(SyncListener listener) {

@@ -33,6 +33,10 @@ public class DriveConnector {
     public DriveConnector() {
     }
 
+    DriveConnector(Drive driveService) {
+        this.driveService = driveService;
+    }
+
     private Drive getService() throws IOException, GeneralSecurityException {
         if (driveService == null) {
             driveService = DriveAPI.getDriveService();
