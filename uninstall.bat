@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 echo ===================================================
@@ -29,33 +29,46 @@ if exist "%APP_DIR%" (
 
 REM 5. Prompt to remove user configuration and credentials (%USERPROFILE%\.wallpaperchanger)
 set "USER_DATA_DIR=%USERPROFILE%\.wallpaperchanger"
-if exist "%USER_DATA_DIR%" (
-    echo.
-    echo ---------------------------------------------------
-    echo Your saved settings, Google credentials, and login
-    echo tokens are stored in:
-    echo   %USER_DATA_DIR%
-    echo ---------------------------------------------------
-    set "DEL_DATA=N"
-    if /i "%~1"=="--all" (
-        set "DEL_DATA=y"
-    ) else if /i "%~1"=="-y" (
-        set "DEL_DATA=y"
-    ) else if /i "%~1"=="/y" (
-        set "DEL_DATA=y"
-    ) else (
-        set /p "DEL_DATA=Do you want to permanently delete settings and credentials? (y/N): "
-    )
+if not exist "%USER_DATA_DIR%" goto finish
 
-    if /i "%DEL_DATA%"=="y" (
-        echo Removing user settings and credentials...
-        rmdir /S /Q "%USER_DATA_DIR%" >nul 2>&1
-        echo [OK] Settings and credentials deleted.
-    ) else (
-        echo [INFO] Kept settings and credentials in %USER_DATA_DIR%
-    )
+echo.
+echo ---------------------------------------------------
+echo Your saved settings, Google credentials, and login
+echo tokens are stored in:
+echo   %USER_DATA_DIR%
+echo ---------------------------------------------------
+
+set "DEL_DATA="
+if /i "%~1"=="--all" set "DEL_DATA=y"
+if /i "%~1"=="-y" set "DEL_DATA=y"
+if /i "%~1"=="/y" set "DEL_DATA=y"
+
+if not defined DEL_DATA (
+    set /p "DEL_DATA=Do you want to permanently delete settings and credentials? (y/N): "
 )
 
+if /i "%DEL_DATA%"=="y" goto delete_config
+if /i "%DEL_DATA%"=="yes" goto delete_config
+goto keep_config
+
+:delete_config
+echo Removing user settings and credentials...
+rmdir /S /Q "%USER_DATA_DIR%" >nul 2>&1
+if exist "%USER_DATA_DIR%" (
+    timeout /t 1 /nobreak >nul 2>&1
+    rmdir /S /Q "%USER_DATA_DIR%" >nul 2>&1
+)
+if exist "%USER_DATA_DIR%" (
+    echo [WARNING] Could not completely delete %USER_DATA_DIR%. Some files may still be in use.
+) else (
+    echo [OK] Settings and credentials deleted.
+)
+goto finish
+
+:keep_config
+echo [INFO] Kept settings and credentials in %USER_DATA_DIR%
+
+:finish
 echo.
 echo ===================================================
 echo   SUCCESS! Wallpaper Changer has been uninstalled.
