@@ -1,6 +1,6 @@
-package com.masquerade817;
+package com.gaurang847;
 
-import com.masquerade817.DriveConnector.WallpaperItem;
+import com.gaurang847.DriveConnector.WallpaperItem;
 
 import java.io.IOException;
 import java.nio.file.Files;

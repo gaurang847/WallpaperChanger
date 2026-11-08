@@ -1,6 +1,6 @@
-package com.masquerade817;
+package com.gaurang847;
 
-import com.masquerade817.AppConfig.ConfigData;
+import com.gaurang847.AppConfig.ConfigData;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;

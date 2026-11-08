@@ -1,4 +1,4 @@
-package com.masquerade817;
+package com.gaurang847;
 
 import com.google.api.client.http.LowLevelHttpRequest;
 import com.google.api.client.http.LowLevelHttpResponse;
@@ -7,7 +7,7 @@ import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.api.services.drive.Drive;
-import com.masquerade817.DriveConnector.WallpaperItem;
+import com.gaurang847.DriveConnector.WallpaperItem;
 import org.junit.Before;
 import org.junit.Test;
 

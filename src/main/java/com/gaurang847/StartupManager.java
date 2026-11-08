@@ -1,4 +1,4 @@
-package com.masquerade817;
+package com.gaurang847;
 
 import com.sun.jna.platform.win32.Advapi32Util;
 import static com.sun.jna.platform.win32.WinReg.HKEY_CURRENT_USER;
@@ -65,7 +65,7 @@ public class StartupManager {
         if (jarPath != null) {
             return "\"%s\" -jar \"%s\" --background".formatted(javaBin, jarPath.toAbsolutePath());
         } else {
-            return "\"%s\" -cp \"%s\" com.masquerade817.Main --background".formatted(
+            return "\"%s\" -cp \"%s\" com.gaurang847.Main --background".formatted(
                     javaBin, System.getProperty("java.class.path")
             );
         }
