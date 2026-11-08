@@ -128,6 +128,10 @@ public class SingleInstanceManager {
                 if (listener != null) {
                     listener.onActivateRequested();
                 }
+            } else if ("SHUTDOWN".equalsIgnoreCase(command) || "EXIT".equalsIgnoreCase(command)) {
+                writer.println("OK");
+                cleanup();
+                System.exit(0);
             }
         } catch (Exception ignored) {
         }
