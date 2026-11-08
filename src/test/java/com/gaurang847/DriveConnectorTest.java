@@ -113,6 +113,23 @@ public class DriveConnectorTest {
 
         var selected = connector.selectRandomWallpaper(files, "id1");
         assertEquals("id1", selected.id());
+
+        var selectedWithBoth = connector.selectRandomWallpaper(files, "id1", "img1.jpg");
+        assertEquals("id1", selectedWithBoth.id());
+    }
+
+    @Test
+    public void testSelectRandomWallpaperExcludesCurrentByNameWhenMultiple() {
+        var files = List.of(
+                new WallpaperItem("id1", "same_name.jpg", "image/jpeg"),
+                new WallpaperItem("id2", "same_name.jpg", "image/jpeg"),
+                new WallpaperItem("id3", "distinct.jpg", "image/jpeg")
+        );
+
+        // When excluding same_name.jpg, should pick distinct.jpg
+        var selected = connector.selectRandomWallpaper(files, "id1", "same_name.jpg");
+        assertNotNull(selected);
+        assertEquals("id3", selected.id());
     }
 
     @Test

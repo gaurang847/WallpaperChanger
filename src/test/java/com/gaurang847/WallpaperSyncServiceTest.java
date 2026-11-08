@@ -216,4 +216,65 @@ public class WallpaperSyncServiceTest {
         assertEquals("found_wallpaper.jpg", successWallpaper.get());
         assertTrue(Files.exists(tempLocalDir.resolve("found_wallpaper.jpg")));
     }
+
+    @Test
+    public void testSyncWithSingleImageSkipsRedundantDownloadWhenAlreadyApplied() throws IOException {
+        var responses = new HashMap<String, String>();
+        responses.put("single_folder", """
+                {"files": [{"id": "single_img", "name": "only_one.jpg", "mimeType": "image/jpeg"}]}
+                """);
+
+        var existingFile = tempLocalDir.resolve("only_one.jpg");
+        Files.writeString(existingFile, "original content");
+
+        config.update(new AppConfig.ConfigData(
+                "single_folder",
+                tempLocalDir.toAbsolutePath().toString(),
+                60,
+                true,
+                false,
+                "",
+                existingFile.toAbsolutePath().toString(),
+                "single_img",
+                "2",
+                true,
+                3
+        ));
+
+        var mockDrive = createMockDrive(responses);
+        var connector = new DriveConnector(mockDrive);
+        var syncService = new WallpaperSyncService(config, connector, new WallpaperSetter());
+
+        var syncSuccessCalled = new AtomicBoolean(false);
+
+        syncService.addListener(new WallpaperSyncService.SyncListener() {
+            @Override
+            public void onSyncStarted() {}
+
+            @Override
+            public void onProgress(String status) {}
+
+            @Override
+            public void onSyncSuccess(String wallpaperName, Path localPath) {
+                syncSuccessCalled.set(true);
+            }
+
+            @Override
+            public void onSyncFailed(String reason, Throwable error) {}
+
+            @Override
+            public void onScheduleUpdated(java.util.Date nextRunTime) {}
+        });
+
+        boolean result = syncService.performSyncAndChange();
+
+        // 1. Must succeed without errors
+        assertTrue(result);
+
+        // 2. Because it's already applied and the only image, onSyncSuccess should not be triggered repeatedly
+        assertFalse(syncSuccessCalled.get());
+
+        // 3. File content on disk was not overwritten
+        assertEquals("original content", Files.readString(existingFile));
+    }
 }

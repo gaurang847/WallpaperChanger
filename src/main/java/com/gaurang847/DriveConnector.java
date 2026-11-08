@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class DriveConnector {
 
@@ -140,30 +141,47 @@ public class DriveConnector {
     }
 
     /**
-     * Selects a random image file from the list.
-     * Uses Java 21 Sequenced Collections (getFirst()).
+     * Selects a random image file from the list, avoiding the previously selected image.
      */
     public WallpaperItem selectRandomWallpaper(List<WallpaperItem> files, String excludeDriveId) {
+        return selectRandomWallpaper(files, excludeDriveId, null);
+    }
+
+    /**
+     * Selects a random image file from the list, avoiding the previously selected image by ID and name.
+     * If only one file is present in the list, that single file is safely returned.
+     */
+    public WallpaperItem selectRandomWallpaper(List<WallpaperItem> files, String excludeDriveId, String excludeName) {
         if (files == null || files.isEmpty()) {
             throw new IllegalStateException("No wallpapers found in the selected Google Drive folder.");
         }
 
+        // Handle single image: when only 1 image exists in the entire drive, return it safely
         if (files.size() == 1) {
             return files.getFirst();
         }
 
         List<WallpaperItem> candidates = files;
-        if (excludeDriveId != null && !excludeDriveId.isBlank()) {
+
+        // When multiple images exist, ensure the same image is never selected consecutively
+        if ((excludeDriveId != null && !excludeDriveId.isBlank()) || (excludeName != null && !excludeName.isBlank())) {
             var filtered = files.stream()
-                    .filter(item -> !excludeDriveId.equals(item.id()))
+                    .filter(item -> (excludeDriveId == null || !excludeDriveId.equals(item.id()))
+                            && (excludeName == null || !excludeName.equalsIgnoreCase(item.name())))
                     .toList();
             if (!filtered.isEmpty()) {
                 candidates = filtered;
+            } else if (excludeDriveId != null && !excludeDriveId.isBlank()) {
+                var idFiltered = files.stream()
+                        .filter(item -> !excludeDriveId.equals(item.id()))
+                        .toList();
+                if (!idFiltered.isEmpty()) {
+                    candidates = idFiltered;
+                }
             }
         }
 
-        var rand = new Random();
-        int index = rand.nextInt(candidates.size());
+        int index = ThreadLocalRandom.current().nextInt(candidates.size());
         return candidates.get(index);
     }
 

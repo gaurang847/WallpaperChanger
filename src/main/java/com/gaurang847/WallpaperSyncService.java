@@ -163,9 +163,32 @@ public class WallpaperSyncService {
                 return false;
             }
 
-            // 2. Select random wallpaper
+            // 2. Select random wallpaper (excluding previous image to prevent consecutive repeats)
             var lastDriveId = cfg.lastWallpaperDriveId();
-            var selectedFile = driveConnector.selectRandomWallpaper(images, lastDriveId);
+            var lastPath = cfg.lastWallpaperPath();
+            String lastName = (lastPath != null && !lastPath.isBlank())
+                    ? Path.of(lastPath).getFileName().toString()
+                    : null;
+
+            var selectedFile = driveConnector.selectRandomWallpaper(images, lastDriveId, lastName);
+
+            // Handle single-image Drive folder: if the only image in Drive is already active locally,
+            // skip redundant re-download and re-application.
+            boolean isSameImage = (lastDriveId != null && !lastDriveId.isBlank() && selectedFile.id().equals(lastDriveId))
+                    || (lastName != null && lastName.equalsIgnoreCase(selectedFile.name()) && images.size() == 1);
+
+            if (isSameImage && lastPath != null && !lastPath.isBlank()) {
+                var currentLocalPath = Path.of(lastPath);
+                if (Files.exists(currentLocalPath)) {
+                    String msg = "Google Drive has only 1 wallpaper (%s), which is already applied.".formatted(selectedFile.name());
+                    System.out.println("[WallpaperSyncService] " + msg + " Skipping re-download.");
+                    this.lastSyncTime = new Date();
+                    this.lastStatusMessage = msg;
+                    this.nextSyncTime = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(cfg.frequencyMinutes()));
+                    notifyScheduleUpdated(this.nextSyncTime);
+                    return true;
+                }
+            }
 
             notifyProgress("Downloading %s...".formatted(selectedFile.name()));
             var downloadedPath = driveConnector.downloadWallpaper(
