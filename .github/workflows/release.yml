@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -26,6 +28,30 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean package
+
+      - name: Generate Changelog from Commits
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            echo "Generating changelog since $PREV_TAG"
+            LOG=$(git log "$PREV_TAG..HEAD" --no-merges --pretty=format:"- %s (%h)")
+            COMPARE="**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ github.ref_name }}"
+          else
+            echo "No previous tag found, generating changelog from beginning"
+            LOG=$(git log --no-merges --pretty=format:"- %s (%h)")
+            COMPARE=""
+          fi
+
+          {
+            echo "commits<<EOF"
+            echo "$LOG"
+            if [ -n "$COMPARE" ]; then
+              echo ""
+              echo "$COMPARE"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Prepare Windows Distribution Bundle
         run: |
@@ -74,46 +100,31 @@ jobs:
           name: "Wallpaper Changer ${{ github.ref_name }}"
           body: |
             ### Wallpaper Changer ${{ github.ref_name }}
-            
-            A lightweight, modern Windows desktop background application that keeps your wallpaper synchronized with a centralized Google Drive folder.
-            
+
             ---
-            
+
             ### 📦 Download Assets
             - **`WallpaperChanger-windows.zip`** (Recommended): Complete Windows package with one-click installer (`install.bat`), portable launcher (`run.bat`), and background scripts.
             - **`WallpaperChanger-1.0.0.jar`**: Standalone executable fat JAR (requires Java 21+).
-            
+
             ---
-            
+
+            ### 📝 What's Changed
+            ${{ steps.changelog.outputs.commits }}
+
+            ---
+
             ### 🚀 Quick Start
-            1. **Prerequisite**: Ensure **[Java Runtime (JRE / JDK) 21 or higher](https://adoptium.net/temurin/releases/?version=21)** is installed on Windows.
+            1. Ensure **[Java Runtime (JRE / JDK) 21 or higher](https://adoptium.net/temurin/releases/?version=21)** is installed on Windows.
             2. Download and extract **`WallpaperChanger-windows.zip`**.
-            3. Run your preferred launch method:
-               - **Install permanently**: Double-click `install.bat` (installs to `%LOCALAPPDATA%`, creates Start Menu shortcut, and registers background auto-startup).
-               - **Run portable**: Double-click `run.bat` (runs in-place without modifying system settings).
-               - **Silent background**: Double-click `run-background.vbs` (launches straight to the Windows System Tray).
-            4. In the Settings window, link your Google account or Service Account key, paste your Google Drive folder link or ID, and click **Save Settings**!
-            
+            3. Run `install.bat` (installer) or `run.bat` (portable).
+
             ---
-            
-            ### ✨ Key Features
-            - **Centralized Google Drive Sync**: Sync wallpapers from a single Google Drive folder across all your Windows PCs.
-            - **Recursive Subfolder Search**: Traverse nested subfolders with selectable search depth (from 1 level up to 10 levels).
-            - **Zero Local Clutter**: Automatically removes previously unset wallpapers so only the currently active wallpaper remains on disk.
-            - **Safe Empty-Folder Handling**: Preserves your existing desktop wallpaper and local files if the Drive folder contains 0 images.
-            - **Dual Authentication Support**:
-              - **Service Account (Recommended)**: Set up once for permanent background rotation with no 7-day token expirations or browser login popups.
-              - **OAuth 2.0**: Quick sign-in via browser with personal Google account.
-            - **Silent System Tray Integration**: Background rotation with right-click tray menu (*Change Wallpaper Now*, *Pause/Resume*, *Open Wallpaper Folder*, *Settings*, *Exit*).
-            - **Customizable Intervals & Styling**: Rotation from 5 minutes to 24 hours (or custom minutes) with Fill, Fit, Center, Tile, or Span styling.
-            - **Single-Instance Enforcement**: Only one background instance runs at a time; launching again automatically brings the Settings window to focus.
-            
-            ---
-            
-            📖 **Setup Guide & Documentation**: [GitHub Repository README](https://github.com/${{ github.repository }}#readme)
+
+            📖 **Full Documentation & Google Drive Setup Guide**: [README](https://github.com/${{ github.repository }}#readme)
           files: |
             dist/WallpaperChanger-windows.zip
             target/WallpaperChanger-*.jar
-          generate_release_notes: true
+          generate_release_notes: false
           draft: false
           prerelease: false
