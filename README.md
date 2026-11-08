@@ -205,7 +205,7 @@ target/WallpaperChanger-1.0.0.jar
 ```
 
 ### Running Unit Tests
-To execute all 31 automated unit tests:
+To execute all 35 automated unit tests:
 ```bash
 mvn test
 ```

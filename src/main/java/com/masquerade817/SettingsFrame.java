@@ -65,7 +65,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     private JButton testFolderButton;
     private JCheckBox includeSubfoldersCheckbox;
     private JLabel depthLabel;
-    private JComboBox<String> depthCombo;
+    private JComboBox<SubfolderDepth> depthCombo;
     private JLabel testFolderResultLabel;
 
     private JTextField customCredentialsField;
@@ -328,14 +328,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         includeSubfoldersCheckbox.addActionListener(e -> updateSubfolderControlsEnabled());
 
         depthLabel = new JLabel("Depth:");
-        String[] depthOptions = {
-                "1 level (Direct subfolders only)",
-                "2 levels",
-                "3 levels (Recommended)",
-                "5 levels (Deep search)",
-                "10 levels (Max / All)"
-        };
-        depthCombo = new JComboBox<>(depthOptions);
+        depthCombo = new JComboBox<>(SubfolderDepth.values());
         depthCombo.setToolTipText("How many nested subfolder levels to explore");
 
         subfolderRow.add(includeSubfoldersCheckbox);
@@ -841,7 +834,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         styleCombo.setSelectedItem(styleName);
 
         includeSubfoldersCheckbox.setSelected(data.includeSubfolders());
-        setDepthComboFromValue(data.subfolderDepth());
+        depthCombo.setSelectedItem(SubfolderDepth.fromDepth(data.subfolderDepth()));
         updateSubfolderControlsEnabled();
     }
 
@@ -852,25 +845,8 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private int getSelectedSubfolderDepth() {
-        String sel = (String) depthCombo.getSelectedItem();
-        if (sel == null) return 3;
-        if (sel.startsWith("1 level")) return 1;
-        if (sel.startsWith("2 levels")) return 2;
-        if (sel.startsWith("3 levels")) return 3;
-        if (sel.startsWith("5 levels")) return 5;
-        if (sel.startsWith("10 levels")) return 10;
-        return 3;
-    }
-
-    private void setDepthComboFromValue(int depth) {
-        String item = switch (depth) {
-            case 1 -> "1 level (Direct subfolders only)";
-            case 2 -> "2 levels";
-            case 5 -> "5 levels (Deep search)";
-            case 10 -> "10 levels (Max / All)";
-            default -> "3 levels (Recommended)";
-        };
-        depthCombo.setSelectedItem(item);
+        var selected = (SubfolderDepth) depthCombo.getSelectedItem();
+        return (selected != null ? selected : SubfolderDepth.LEVEL_3).getDepth();
     }
 
     private void saveUIToConfig() {
@@ -1051,7 +1027,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         return includeSubfoldersCheckbox;
     }
 
-    public JComboBox<String> getDepthCombo() {
+    public JComboBox<SubfolderDepth> getDepthCombo() {
         return depthCombo;
     }
 }
