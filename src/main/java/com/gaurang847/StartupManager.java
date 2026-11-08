@@ -14,7 +14,37 @@ import java.nio.file.Path;
 public class StartupManager {
 
     public static final String APP_NAME = "WallpaperChanger";
+    public static final String APP_USER_MODEL_ID = "Gaurang847.WallpaperChanger";
+    public static final String APP_DISPLAY_NAME = "Wallpaper Changer";
     private static final String RUN_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+
+    /**
+     * Initializes Windows Application User Model ID (AUMID) so Windows Action Center
+     * attributes notifications and taskbar grouping to "Wallpaper Changer" instead of
+     * the generic "Java(TM) Platform SE binary".
+     */
+    public static void initAppUserModelId() {
+        if (!isSupported()) {
+            return;
+        }
+        try {
+            com.sun.jna.platform.win32.Shell32.INSTANCE.SetCurrentProcessExplicitAppUserModelID(
+                    new com.sun.jna.WString(APP_USER_MODEL_ID)
+            );
+        } catch (Throwable t) {
+            System.err.println("[StartupManager] Could not set AppUserModelID: " + t.getMessage());
+        }
+
+        try {
+            String aumidKey = "Software\\Classes\\AppUserModelId\\" + APP_USER_MODEL_ID;
+            if (!Advapi32Util.registryKeyExists(HKEY_CURRENT_USER, aumidKey)) {
+                Advapi32Util.registryCreateKey(HKEY_CURRENT_USER, "Software\\Classes\\AppUserModelId", APP_USER_MODEL_ID);
+            }
+            Advapi32Util.registrySetStringValue(HKEY_CURRENT_USER, aumidKey, "DisplayName", APP_DISPLAY_NAME);
+        } catch (Throwable t) {
+            System.err.println("[StartupManager] Could not register AppUserModelID in registry: " + t.getMessage());
+        }
+    }
 
     /**
      * Checks if startup management is supported on the current platform.

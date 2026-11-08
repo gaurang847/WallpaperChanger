@@ -43,6 +43,7 @@ timeout /t 1 /nobreak >nul 2>&1
 REM 2. Remove Windows Startup Registry key
 echo Removing from Windows Startup Registry...
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "WallpaperChanger" /f >nul 2>&1
+reg delete "HKCU\Software\Classes\AppUserModelId\Gaurang847.WallpaperChanger" /f >nul 2>&1
 
 REM 3. Remove Start Menu shortcut
 echo Removing Start Menu shortcut...

@@ -14,6 +14,9 @@ public class Main {
     private static WallpaperSyncService syncService;
 
     public static void main(String[] args) {
+        // Initialize Windows AppUserModelID early so notifications display "Wallpaper Changer"
+        StartupManager.initAppUserModelId();
+
         // Enforce single running instance. If an instance is already active,
         // it is brought to the foreground and this duplicate process terminates.
         boolean isOnlyInstance = SingleInstanceManager.checkAndAcquireLock(() -> {
