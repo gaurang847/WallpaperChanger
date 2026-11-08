@@ -68,7 +68,7 @@
 
 > **Requirement**: Ensure [Java Runtime (JRE / JDK) 21 or higher](https://adoptium.net/temurin/releases/?version=21) is installed on your Windows PC.
 
-If you downloaded the ready-to-run release zip (`WallpaperChanger-windows.zip`) from [GitHub Releases](https://github.com):
+If you downloaded the ready-to-run release zip (`WallpaperChanger-windows.zip`) from [GitHub Releases](https://github.com/gaurang847/WallpaperChanger/releases):
 
 1. Extract the `.zip` archive to any folder on your computer.
 2. Choose one of the launch options below:
@@ -129,11 +129,12 @@ A **Google Service Account** acts as an automated background bot identity for yo
 
 #### Step 4: Connect in Wallpaper Changer
 1. Open Wallpaper Changer (run `run.bat` or `install.bat`).
-2. Under **Google Drive Settings**, click **Browse...** next to **OAuth / Service Account (.json)**.
+2. Under **Google Drive Settings**, click **Browse...** next to **Credentials (.json)**.
 3. Select the JSON file you downloaded in Step 2.
    - The app will automatically detect it as a Service Account!
 4. Paste your Drive folder URL in the **Drive Folder ID / URL** field.
-5. Click **Test Folder** to verify that images are detected, then click **Save Settings**!
+5. *(Optional)* If your wallpapers are organized in subfolders, check **Include subfolders** and select your desired depth (e.g. 1 to 10 levels).
+6. Click **Test Folder** to verify that images are detected, then click **Save Settings**!
 
 ---
 
@@ -158,9 +159,9 @@ If you prefer logging in with your personal Google account via your browser:
 3. Click **Download JSON**.
 
 #### Step 4: Connect in Wallpaper Changer
-1. Open Wallpaper Changer → click **Browse...** → select the downloaded OAuth JSON.
+1. Open Wallpaper Changer → click **Browse...** next to **Credentials (.json)** → select the downloaded OAuth JSON.
 2. Click **Authenticate with Google** and complete the browser sign-in.
-3. Paste your Drive folder link and click **Save Settings**!
+3. Paste your Drive folder link, optionally enable **Include subfolders**, and click **Save Settings**!
 
 ---
 
@@ -214,7 +215,7 @@ mvn test
 The project includes a GitHub Actions release pipeline ([`.github/workflows/release.yml`](file:///home/gaurang/projects/WallpaperChanger/.github/workflows/release.yml)). Whenever a git version tag is pushed (e.g. `v1.0.0`):
 1. GitHub Actions sets up Java 21 and runs `mvn clean package`.
 2. Bundles `WallpaperChanger.jar`, `install.bat`, `run.bat`, `uninstall.bat`, `run-background.vbs`, and a `QUICKSTART.txt` guide into `WallpaperChanger-windows.zip`.
-3. Automatically publishes a GitHub Release with the zip asset attached.
+3. Automatically publishes a GitHub Release with categorized release notes, attaching both `WallpaperChanger-windows.zip` and the standalone `WallpaperChanger-1.0.0.jar`.
 
 To trigger a release:
 ```bash
@@ -230,8 +231,8 @@ All application data is isolated within the user's home profile directory:
 
 | Resource | Path | Description |
 | :--- | :--- | :--- |
-| **Settings** | `%USERPROFILE%\.wallpaperchanger\config.json` | JSON configuration (rotation interval, Drive folder, style, etc.) |
-| **OAuth Credentials** | `%USERPROFILE%\.wallpaperchanger\credentials.json` | Google Cloud OAuth Client ID & Secret |
+| **Settings** | `%USERPROFILE%\.wallpaperchanger\config.json` | JSON configuration (rotation interval, Drive folder, subfolder depth, style, etc.) |
+| **Google Credentials** | `%USERPROFILE%\.wallpaperchanger\credentials.json` | Google Service Account key or OAuth 2.0 client credentials |
 | **OAuth Tokens** | `%USERPROFILE%\.wallpaperchanger\tokens\` | User authorization tokens generated during browser login |
 | **Instance Locks** | `%USERPROFILE%\.wallpaperchanger\app.lock` / `app.port` | Concurrency lock and loopback IPC port |
 | **Installed App** | `%LOCALAPPDATA%\WallpaperChanger\` | Application JAR and launcher script (when using `install.bat`) |
