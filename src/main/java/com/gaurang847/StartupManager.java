@@ -41,6 +41,20 @@ public class StartupManager {
                 Advapi32Util.registryCreateKey(HKEY_CURRENT_USER, "Software\\Classes\\AppUserModelId", APP_USER_MODEL_ID);
             }
             Advapi32Util.registrySetStringValue(HKEY_CURRENT_USER, aumidKey, "DisplayName", APP_DISPLAY_NAME);
+
+            // Export high-res app icon and set IconUri so Action Center shows the monitor icon
+            var configDir = Path.of(System.getProperty("user.home"), ".wallpaperchanger");
+            if (!Files.exists(configDir)) {
+                Files.createDirectories(configDir);
+            }
+            var iconPath = configDir.resolve("app_icon.png");
+            if (!Files.exists(iconPath)) {
+                var iconImg = AppIconUtil.generateMonitorIcon(128);
+                javax.imageio.ImageIO.write(iconImg, "PNG", iconPath.toFile());
+            }
+            if (Files.exists(iconPath)) {
+                Advapi32Util.registrySetStringValue(HKEY_CURRENT_USER, aumidKey, "IconUri", iconPath.toAbsolutePath().toString());
+            }
         } catch (Throwable t) {
             System.err.println("[StartupManager] Could not register AppUserModelID in registry: " + t.getMessage());
         }

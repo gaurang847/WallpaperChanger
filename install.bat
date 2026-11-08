@@ -38,8 +38,11 @@ REM Register in Windows Startup (Run key)
 echo Registering in Windows Startup (HKCU\...\Run)...
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "WallpaperChanger" /t REG_SZ /d "wscript.exe \"%APP_DIR%\run.vbs\"" /f >nul
 
-REM Register AppUserModelId for clean Action Center toast notification title
+REM Register AppUserModelId for clean Action Center toast notification title and icon
 reg add "HKCU\Software\Classes\AppUserModelId\Gaurang847.WallpaperChanger" /v "DisplayName" /t REG_SZ /d "Wallpaper Changer" /f >nul 2>&1
+if exist "%USERPROFILE%\.wallpaperchanger\app_icon.png" (
+    reg add "HKCU\Software\Classes\AppUserModelId\Gaurang847.WallpaperChanger" /v "IconUri" /t REG_SZ /d "%USERPROFILE%\.wallpaperchanger\app_icon.png" /f >nul 2>&1
+)
 
 REM Create Start Menu shortcut
 set SHORTCUT_PATH=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Wallpaper Changer.lnk
