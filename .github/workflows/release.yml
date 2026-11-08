@@ -30,8 +30,9 @@ jobs:
       - name: Prepare Windows Distribution Bundle
         run: |
           mkdir -p dist/WallpaperChanger
-          cp target/WallpaperChanger-1.0.0.jar dist/WallpaperChanger/WallpaperChanger.jar
-          cp target/WallpaperChanger-1.0.0.jar dist/WallpaperChanger/WallpaperChanger-1.0.0.jar
+          cp target/WallpaperChanger-*.jar dist/WallpaperChanger/WallpaperChanger.jar
+          JAR_NAME=$(basename target/WallpaperChanger-*.jar)
+          cp target/WallpaperChanger-*.jar "dist/WallpaperChanger/$JAR_NAME"
           cp install.bat dist/WallpaperChanger/
           cp run.bat dist/WallpaperChanger/
           cp uninstall.bat dist/WallpaperChanger/
@@ -70,9 +71,49 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          name: "Wallpaper Changer ${{ github.ref_name }}"
+          body: |
+            ### Wallpaper Changer ${{ github.ref_name }}
+            
+            A lightweight, modern Windows desktop background application that keeps your wallpaper synchronized with a centralized Google Drive folder.
+            
+            ---
+            
+            ### 📦 Download Assets
+            - **`WallpaperChanger-windows.zip`** (Recommended): Complete Windows package with one-click installer (`install.bat`), portable launcher (`run.bat`), and background scripts.
+            - **`WallpaperChanger-1.0.0.jar`**: Standalone executable fat JAR (requires Java 21+).
+            
+            ---
+            
+            ### 🚀 Quick Start
+            1. **Prerequisite**: Ensure **[Java Runtime (JRE / JDK) 21 or higher](https://adoptium.net/temurin/releases/?version=21)** is installed on Windows.
+            2. Download and extract **`WallpaperChanger-windows.zip`**.
+            3. Run your preferred launch method:
+               - **Install permanently**: Double-click `install.bat` (installs to `%LOCALAPPDATA%`, creates Start Menu shortcut, and registers background auto-startup).
+               - **Run portable**: Double-click `run.bat` (runs in-place without modifying system settings).
+               - **Silent background**: Double-click `run-background.vbs` (launches straight to the Windows System Tray).
+            4. In the Settings window, link your Google account or Service Account key, paste your Google Drive folder link or ID, and click **Save Settings**!
+            
+            ---
+            
+            ### ✨ Key Features
+            - **Centralized Google Drive Sync**: Sync wallpapers from a single Google Drive folder across all your Windows PCs.
+            - **Recursive Subfolder Search**: Traverse nested subfolders with selectable search depth (from 1 level up to 10 levels).
+            - **Zero Local Clutter**: Automatically removes previously unset wallpapers so only the currently active wallpaper remains on disk.
+            - **Safe Empty-Folder Handling**: Preserves your existing desktop wallpaper and local files if the Drive folder contains 0 images.
+            - **Dual Authentication Support**:
+              - **Service Account (Recommended)**: Set up once for permanent background rotation with no 7-day token expirations or browser login popups.
+              - **OAuth 2.0**: Quick sign-in via browser with personal Google account.
+            - **Silent System Tray Integration**: Background rotation with right-click tray menu (*Change Wallpaper Now*, *Pause/Resume*, *Open Wallpaper Folder*, *Settings*, *Exit*).
+            - **Customizable Intervals & Styling**: Rotation from 5 minutes to 24 hours (or custom minutes) with Fill, Fit, Center, Tile, or Span styling.
+            - **Single-Instance Enforcement**: Only one background instance runs at a time; launching again automatically brings the Settings window to focus.
+            
+            ---
+            
+            📖 **Setup Guide & Documentation**: [GitHub Repository README](https://github.com/${{ github.repository }}#readme)
           files: |
             dist/WallpaperChanger-windows.zip
-            target/WallpaperChanger-1.0.0.jar
+            target/WallpaperChanger-*.jar
           generate_release_notes: true
           draft: false
           prerelease: false
