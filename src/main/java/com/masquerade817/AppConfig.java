@@ -44,21 +44,6 @@ public class AppConfig {
             }
         }
 
-        public ConfigData(
-                String driveFolderId,
-                String localFolderPath,
-                int frequencyMinutes,
-                boolean deleteUnsetWallpaper,
-                boolean startOnStartup,
-                String customCredentialsPath,
-                String lastWallpaperPath,
-                String lastWallpaperDriveId,
-                String wallpaperStyle
-        ) {
-            this(driveFolderId, localFolderPath, frequencyMinutes, deleteUnsetWallpaper, startOnStartup,
-                    customCredentialsPath, lastWallpaperPath, lastWallpaperDriveId, wallpaperStyle, false, 3);
-        }
-
         public static ConfigData defaultSettings() {
             var defaultLocal = Path.of(System.getProperty("user.home"), "Pictures", "WallpaperChanger")
                     .toAbsolutePath()
@@ -139,13 +124,7 @@ public class AppConfig {
 
     public synchronized void load() {
         if (!Files.exists(configPath)) {
-            // Check if legacy properties file exists and migrate
-            var legacyPropFile = configPath.getParent().resolve("config.properties");
-            if (Files.exists(legacyPropFile)) {
-                migrateLegacyProperties(legacyPropFile);
-            } else {
-                save();
-            }
+            save();
             return;
         }
 
@@ -162,33 +141,6 @@ public class AppConfig {
             MAPPER.writeValue(configPath.toFile(), data);
         } catch (IOException e) {
             System.err.println("Error saving config.json: " + e.getMessage());
-        }
-    }
-
-    private void migrateLegacyProperties(Path legacyPropFile) {
-        try (var in = Files.newInputStream(legacyPropFile)) {
-            var props = new java.util.Properties();
-            props.load(in);
-
-            var folderId = props.getProperty("drive.folder.id", "").trim();
-            var localPath = props.getProperty("local.folder.path", data.localFolderPath()).trim();
-            int freq = 60;
-            try {
-                freq = Integer.parseInt(props.getProperty("change.frequency.minutes", "60"));
-            } catch (NumberFormatException ignored) {}
-
-            boolean deleteUnset = Boolean.parseBoolean(props.getProperty("delete.unset.wallpaper", "true"));
-            boolean startBoot = Boolean.parseBoolean(props.getProperty("start.on.startup", "true"));
-            var customCreds = props.getProperty("custom.credentials.path", "").trim();
-            var lastPath = props.getProperty("last.wallpaper.path", "").trim();
-            var lastId = props.getProperty("last.wallpaper.drive.id", "").trim();
-            var style = props.getProperty("wallpaper.style", "2").trim();
-
-            this.data = new ConfigData(folderId, localPath, freq, deleteUnset, startBoot, customCreds, lastPath, lastId, style);
-            save();
-            System.out.println("Migrated legacy config.properties to modern config.json");
-        } catch (Exception e) {
-            System.err.println("Failed to migrate legacy properties: " + e.getMessage());
         }
     }
 

@@ -80,21 +80,14 @@ public class AppConfigTest {
     }
 
     @Test
-    public void testBackwardCompatibilityDeserializationWithoutSubfolderFields() throws Exception {
+    public void testConfigDataSerializationRoundTrip() throws Exception {
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-        String jsonWithoutSubfolderKeys = """
-                {
-                    "driveFolderId": "folder123",
-                    "localFolderPath": "/local/path",
-                    "frequencyMinutes": 15,
-                    "deleteUnsetWallpaper": true,
-                    "startOnStartup": false,
-                    "wallpaperStyle": "6"
-                }
-                """;
-        var parsed = mapper.readValue(jsonWithoutSubfolderKeys, AppConfig.ConfigData.class);
-        assertEquals("folder123", parsed.driveFolderId());
-        assertFalse(parsed.includeSubfolders());
-        assertEquals(3, parsed.subfolderDepth());
+        var original = new AppConfig.ConfigData(
+                "folder123", "/local/path", 15, true, false, "/creds.json",
+                "/wall.jpg", "driveId456", "6", true, 5
+        );
+        String json = mapper.writeValueAsString(original);
+        var deserialized = mapper.readValue(json, AppConfig.ConfigData.class);
+        assertEquals(original, deserialized);
     }
 }
