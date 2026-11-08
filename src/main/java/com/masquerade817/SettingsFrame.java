@@ -104,6 +104,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         initUI();
         loadConfigToUI();
         updateAuthStatus();
+        setLocationRelativeTo(null);
 
         syncService.addListener(this);
     }
@@ -209,7 +210,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private JPanel createHeaderPanel() {
-        var header = new JPanel(new BorderLayout());
+        var header = new JPanel(new BorderLayout()) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         header.setBackground(new Color(41, 128, 185));
         header.setBorder(new EmptyBorder(12, 16, 12, 16));
 
@@ -227,7 +233,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private JPanel createDrivePanel() {
-        var panel = new JPanel(new GridBagLayout());
+        var panel = new JPanel(new GridBagLayout()) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         panel.setBorder(new CompoundBorder(
                 new TitledBorder("Google Drive Settings"),
                 new EmptyBorder(6, 10, 6, 10)
@@ -306,6 +317,9 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         panel.add(new JLabel("Drive Folder ID / URL:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
+        var folderContainer = new JPanel();
+        folderContainer.setLayout(new BoxLayout(folderContainer, BoxLayout.Y_AXIS));
+
         var folderRow = new JPanel(new BorderLayout(6, 0));
         driveFolderField = new JTextField(24);
         driveFolderField.setToolTipText("Enter Drive folder ID or paste full Google Drive folder URL");
@@ -320,7 +334,15 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
         folderRow.add(driveFolderField, BorderLayout.CENTER);
         folderRow.add(testFolderButton, BorderLayout.EAST);
-        panel.add(folderRow, gbc);
+        folderContainer.add(folderRow);
+
+        testFolderResultLabel = new JLabel();
+        testFolderResultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        testFolderResultLabel.setBorder(new EmptyBorder(3, 0, 0, 0));
+        testFolderResultLabel.setVisible(false);
+        folderContainer.add(testFolderResultLabel);
+
+        panel.add(folderContainer, gbc);
 
         // Row 5: Subfolders & Depth settings
         gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 0;
@@ -345,22 +367,16 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
         subfolderRow.add(depthCombo);
         panel.add(subfolderRow, gbc);
 
-        // Row 6: Folder test feedback (hidden until user clicks 'Test Folder' to avoid extra bottom space)
-        gbc.gridx = 1; gbc.gridy = 6;
-        gbc.insets = new Insets(2, 4, 2, 4);
-        testFolderResultLabel = new JLabel();
-        testFolderResultLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        testFolderResultLabel.setVisible(false);
-        panel.add(testFolderResultLabel, gbc);
-
-        // Reset insets for any subsequent components
-        gbc.insets = new Insets(4, 4, 4, 4);
-
         return panel;
     }
 
     private JPanel createLocalFolderPanel() {
-        var panel = new JPanel(new GridBagLayout());
+        var panel = new JPanel(new GridBagLayout()) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         panel.setBorder(new CompoundBorder(
                 new TitledBorder("Local Wallpaper Folder"),
                 new EmptyBorder(6, 10, 6, 10)
@@ -395,7 +411,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private JPanel createOptionsPanel() {
-        var panel = new JPanel(new GridBagLayout());
+        var panel = new JPanel(new GridBagLayout()) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         panel.setBorder(new CompoundBorder(
                 new TitledBorder("Timing & Behavior"),
                 new EmptyBorder(6, 10, 6, 10)
@@ -452,7 +473,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
 
     private JPanel createStatusPanel() {
         // Use a 2-row layout so status and next-change timing never overlap regardless of filename length
-        var panel = new JPanel(new java.awt.GridLayout(2, 1, 0, 4));
+        var panel = new JPanel(new java.awt.GridLayout(2, 1, 0, 4)) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(210, 215, 220)),
                 new EmptyBorder(8, 12, 8, 12)
@@ -472,7 +498,12 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
     }
 
     private JPanel createActionBar() {
-        var bar = new JPanel(new BorderLayout());
+        var bar = new JPanel(new BorderLayout()) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+            }
+        };
 
         var leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         exitAppButton = new JButton("Exit Application");
@@ -555,6 +586,7 @@ public class SettingsFrame extends JFrame implements WallpaperSyncService.SyncLi
                 }
             }
         }
+        pack();
     }
 
     private void onCopyServiceAccountEmail() {
